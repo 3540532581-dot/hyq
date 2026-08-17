@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>点仔动效生成工具</title>
+<style>
+  :root {
+    --primary: #FF4A47;
+    --primary-deep: #E6393A;
+    --primary-glow: rgba(255, 74, 71, 0.25);
+    --orange: #FF7A45;
+    --green: #00C853;
+    --ink: #ffffff;
+    --ink-2: #a0a0a0;
+    --ink-3: #666666;
+    --line: #222222;
+    --line-hover: #333333;
+    --bg: #000000;
+    --card: #111111;
+    --card-hover: #161616;
+    --input-bg: #0a0a0a;
+    --radius: 16px;
+    --radius-sm: 12px;
+    --shadow: 0 0 0 1px rgba(255,255,255,0.06);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--primary); text-decoration: none; }
+
+  /* ===== 顶部 ===== */
+  .topbar {
+    background: var(--bg);
+    color: var(--ink);
+    padding: 48px 40px 32px;
+    border-bottom: 1px solid var(--line);
+    text-align: center;
+  }
+  .topbar-inner { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; }
+  .logo-badge {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: var(--card);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    border: 1px solid var(--line);
+    margin-bottom: 16px;
+  }
+  .topbar h1 { font-size: 38px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.3; margin-bottom: 8px; }
+  .topbar .sub { font-size: 15px; color: var(--ink-2); font-weight: 400; margin-bottom: 10px; }
+  .topbar .desc { font-size: 14px; color: var(--ink-3); max-width: 720px; line-height: 1.7; }
+
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 32px 40px 80px; }
+
+  /* ===== 步骤条 ===== */
+  .stepper { display: flex; gap: 12px; margin: 0 0 28px; }
+  .step-chip {
+    flex: 1; text-align: center; padding: 16px 12px; border-radius: var(--radius-sm);
+    background: var(--card); border: 1px solid var(--line);
+    font-size: 14px; color: var(--ink-3); transition: all .25s ease;
+    cursor: default;
+    font-weight: 500;
+  }
+  .step-chip .n {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%; background: #1a1a1a;
+    font-weight: 700; margin-right: 8px; font-size: 13px; color: var(--ink-3);
+    border: 1px solid var(--line);
+    transition: all .25s ease;
+  }
+  .step-chip.active {
+    border-color: var(--primary); color: var(--primary); background: rgba(255,74,71,0.08);
+    box-shadow: 0 0 20px var(--primary-glow);
+  }
+  .step-chip.active .n { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .step-chip.done { color: var(--ink-2); }
+  .step-chip.done .n { background: rgba(0,200,83,0.15); color: var(--green); border-color: rgba(0,200,83,0.3); }
+
+  /* ===== 卡片 ===== */
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 28px; margin-bottom: 24px;
+    transition: border-color .2s ease;
+  }
+  .card:hover { border-color: var(--line-hover); }
+  .card h2 {
+    font-size: 22px; font-weight: 700; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 10px;
+    color: var(--ink);
+  }
+  .card h2 .tag {
+    font-size: 13px; background: rgba(255,74,71,0.12); color: var(--primary);
+    padding: 3px 10px; border-radius: 20px; font-weight: 600;
+    border: 1px solid rgba(255,74,71,0.2);
+  }
+  .card .hint { font-size: 15px; color: var(--ink-3); margin-bottom: 20px; line-height: 1.7; }
+
+  /* ===== 上传区 ===== */
+  .dropzone {
+    border: 2px dashed var(--line); border-radius: var(--radius);
+    padding: 56px 32px; text-align: center; cursor: pointer;
+    transition: all .25s ease; background: var(--input-bg);
+    position: relative;
+  }
+  .dropzone .icon {
+    font-size: 48px; margin-bottom: 16px; opacity: 0.7;
+    transition: all .25s ease;
+  }
+  .dropzone p {
+    font-size: 16px; color: var(--ink-2); font-weight: 500;
+    margin-bottom: 8px;
+  }
+  .dropzone p a { font-weight: 600; border-bottom: 1px solid transparent; transition: border-color .2s; }
+  .dropzone p a:hover { border-bottom-color: var(--primary); }
+  .dropzone .sub {
+    font-size: 13px; color: var(--ink-3); line-height: 1.6;
+  }
+  .dropzone:hover, .dropzone.drag {
+    border-color: var(--primary);
+    background: rgba(255,74,71,0.04);
+    box-shadow: 0 0 30px var(--primary-glow);
+  }
+  .dropzone:hover .icon { opacity: 1; transform: scale(1.1); }
+  .dropzone input[type="file"] { display: none; }
+
+  /* ===== 帧预览 ===== */
+  .frames { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 20px; }
+  .frame-card {
+    width: 160px; border-radius: var(--radius-sm); overflow: hidden;
+    background: var(--card); border: 1px solid var(--line);
+    transition: all .2s ease;
+  }
+  .frame-card:hover { border-color: var(--line-hover); transform: translateY(-2px); }
+  .frame-card .imgbox { position: relative; width: 100%; aspect-ratio: 1/1; background: #0a0a0a; }
+  .frame-card .imgbox img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .frame-card .badge {
+    position: absolute; bottom: 8px; left: 8px;
+    background: rgba(31,35,41,0.85); color: #fff; padding: 4px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600; backdrop-filter: blur(4px);
+  }
+  .frame-card .badge.first { background: var(--green); }
+  .frame-card .badge.last { background: var(--orange); }
+  .frame-card .badge.mid { background: #5B8DEF; }
+  .frame-card .rm {
+    position: absolute; top: 8px; right: 8px; width: 28px; height: 28px;
+    border-radius: 50%; background: rgba(0,0,0,0.6); color: #fff; border: none;
+    font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity .2s;
+  }
+  .frame-card:hover .rm { opacity: 1; }
+  .frame-card .rm:hover { background: var(--primary); }
+  .frame-card .meta { padding: 10px 12px; font-size: 12px; }
+  .frame-card .meta .row { display: flex; justify-content: space-between; color: var(--ink-2); margin-bottom: 2px; }
+  .frame-card .meta .row.dim { color: var(--ink-3); font-size: 11px; }
+
+  /* ===== 动作卡片 ===== */
+  .action-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
+  .action-card {
+    border: 1.5px solid var(--line); border-radius: var(--radius-sm);
+    padding: 24px 16px; cursor: pointer; text-align: center;
+    transition: all .2s ease; background: var(--card); position: relative;
+  }
+  .action-card .emoji { font-size: 32px; margin-bottom: 10px; transition: transform .2s; }
+  .action-card .name { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+  .action-card .desc { font-size: 12px; color: var(--ink-3); line-height: 1.5; }
+  .action-card:hover { border-color: var(--line-hover); background: var(--card-hover); transform: translateY(-2px); }
+  .action-card:hover .emoji { transform: scale(1.15); }
+  .action-card.sel {
+    border-color: var(--primary); background: rgba(255,74,71,0.06);
+    box-shadow: 0 0 24px var(--primary-glow);
+  }
+  .action-card.sel .name { color: var(--primary); }
+
+  /* ===== 模型卡片 ===== */
+  .model-select { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+  .model-card {
+    border: 1.5px solid var(--line); border-radius: var(--radius-sm);
+    padding: 20px 18px; cursor: pointer; transition: all .2s ease;
+    background: var(--card); position: relative;
+  }
+  .model-card:hover { border-color: var(--line-hover); background: var(--card-hover); transform: translateY(-2px); }
+  .model-card.sel {
+    border-color: var(--primary); background: rgba(255,74,71,0.06);
+    box-shadow: 0 0 24px var(--primary-glow);
+  }
+  .model-card .m-radio {
+    position: absolute; top: 14px; right: 14px; width: 22px; height: 22px;
+    border-radius: 50%; border: 2px solid var(--line); display: flex; align-items: center;
+    justify-content: center; font-size: 12px; color: transparent; transition: all .2s;
+  }
+  .model-card.sel .m-radio { border-color: var(--primary); background: var(--primary); color: #fff; }
+  .model-card .m-name { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 6px; padding-right: 30px; }
+  .model-card .m-desc { font-size: 13px; color: var(--ink-3); line-height: 1.5; }
+
+  /* ===== 校验表格 ===== */
+  .check-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+  .check-table th { text-align: left; padding: 12px 14px; color: var(--ink-2); font-weight: 500; border-bottom: 1px solid var(--line); background: rgba(255,255,255,0.02); }
+  .check-table td { padding: 12px 14px; border-bottom: 1px solid var(--line); color: var(--ink-2); }
+  .check-table td.status { white-space: nowrap; width: 100px; }
+  .check-table .st { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 500; }
+  .check-table .st.pass { background: rgba(0,200,83,0.1); color: var(--green); }
+  .check-table .st.warn { background: rgba(255,159,67,0.1); color: #FF9F43; }
+  .check-table .st.fail { background: rgba(255,74,71,0.1); color: var(--primary); }
+  .check-table .st.none { background: rgba(255,255,255,0.04); color: var(--ink-3); }
+  .report-summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .pill { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; padding: 6px 14px; border-radius: 20px; font-weight: 500; }
+  .pill.ok { background: rgba(0,200,83,0.1); color: var(--green); }
+  .pill.warn { background: rgba(255,159,67,0.1); color: #FF9F43; }
+  .pill.bad { background: rgba(255,74,71,0.1); color: var(--primary); }
+  .pill.idle { background: rgba(255,255,255,0.04); color: var(--ink-3); }
+
+  /* ===== 提示词区 ===== */
+  .prompt-box {
+    background: #0a0a0a; color: #E8E8E8; border-radius: var(--radius-sm); padding: 20px;
+    font-size: 14px; line-height: 1.7; position: relative; border: 1px solid var(--line);
+  }
+  .prompt-box .hl { color: var(--primary); font-weight: 600; }
+  .prompt-box .common { color: #5B8DEF; }
+  .prompt-box .ratio { color: #FF9F43; }
+  .copy-btn {
+    position: absolute; top: 14px; right: 14px;
+    background: rgba(255,255,255,0.08); color: var(--ink-2); border: 1px solid var(--line);
+    border-radius: 8px; padding: 6px 14px; font-size: 13px; cursor: pointer; transition: all .2s;
+  }
+  .copy-btn:hover { background: rgba(255,255,255,0.15); color: var(--ink); border-color: var(--line-hover); }
+
+  /* ===== 标签 ===== */
+  .sub-label { font-size: 14px; font-weight: 600; color: var(--ink-2); margin: 24px 0 10px; display: flex; align-items: center; gap: 8px; }
+  .sub-label .bar { width: 3px; height: 16px; background: var(--primary); border-radius: 2px; }
+  .common-box {
+    border: 1px dashed var(--line); border-radius: var(--radius-sm); padding: 14px 16px;
+    font-size: 14px; color: var(--ink-2); background: var(--input-bg); line-height: 1.6;
+  }
+  .tag-mini { font-size: 11px; background: rgba(255,74,71,0.12); color: var(--primary); padding: 2px 8px; border-radius: 4px; margin-right: 8px; font-weight: 600; border: 1px solid rgba(255,74,71,0.2); }
+
+  /* ===== 按钮 ===== */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 12px 28px; border-radius: 10px; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: all .2s; border: none; letter-spacing: 0.3px;
+  }
+  .btn-primary { background: linear-gradient(135deg, var(--primary), var(--orange)); color: #fff; box-shadow: 0 4px 20px rgba(255,74,71,0.3); }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(255,74,71,0.4); }
+  .btn-primary:disabled { background: #3a1a1a; color: #8a5a5a; cursor: not-allowed; box-shadow: none; transform: none; }
+  .btn-ghost { background: transparent; color: var(--ink-2); border: 1px solid var(--line); }
+  .btn-ghost:hover { border-color: var(--line-hover); color: var(--ink); background: rgba(255,255,255,0.04); }
+  .btn-green { background: linear-gradient(135deg, var(--green), #00B04A); color: #fff; box-shadow: 0 4px 20px rgba(0,200,83,0.25); }
+  .btn-green:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(0,200,83,0.35); }
+  .btn-green:disabled { background: #1a3a22; color: #5a8a6a; cursor: not-allowed; box-shadow: none; transform: none; }
+
+  /* ===== 进度条 ===== */
+  .progress-wrap { margin-top: 20px; }
+  .progress-bar { height: 6px; background: var(--line); border-radius: 10px; overflow: hidden; }
+  .progress-bar .fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--primary), var(--orange)); border-radius: 10px; transition: width .4s ease; }
+  .progress-text { font-size: 13px; color: var(--ink-2); margin-top: 10px; font-weight: 500; }
+
+  /* ===== 视频结果 ===== */
+  .video-result { margin-top: 20px; border-radius: var(--radius-sm); overflow: hidden; background: #000; border: 1px solid var(--line); }
+  .video-result video { width: 100%; display: block; }
+  .video-result .placeholder { padding: 60px 24px; text-align: center; color: var(--ink-3); font-size: 14px; border: 1px dashed var(--line); border-radius: var(--radius-sm); background: var(--input-bg); }
+  .video-info {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    flex-wrap: wrap; padding: 14px 18px; background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius-sm); margin-top: 14px;
+  }
+  .video-info .video-status { font-size: 14px; color: var(--ink-2); display: flex; align-items: center; gap: 6px; }
+  .video-info .video-status .ok { color: var(--green); font-size: 16px; }
+  .video-info .video-actions { display: flex; gap: 8px; }
+  .btn-sm { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all .2s; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+  .btn-download { background: var(--primary); color: #fff; border: none; }
+  .btn-download:hover { background: var(--primary-deep); }
+  .btn-secondary { background: transparent; color: var(--ink-2); border: 1px solid var(--line); }
+  .btn-secondary:hover { background: rgba(255,255,255,0.04); color: var(--ink); border-color: var(--line-hover); }
+
+  /* ===== 备注 ===== */
+  .note {
+    margin-top: 16px; font-size: 13px; color: var(--ink-3); background: var(--input-bg);
+    border-left: 3px solid var(--line); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 14px 18px; line-height: 1.7;
+  }
+  .note strong { color: var(--ink-2); font-weight: 600; }
+  .note a { color: var(--primary); font-weight: 500; }
+
+  /* ===== Toast ===== */
+  .toast-container { position: fixed; top: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; }
+  .toast { padding: 12px 20px; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 500; box-shadow: 0 4px 20px rgba(0,0,0,0.4); animation: slideIn .3s ease; }
+  .toast.ok { background: var(--green); }
+  .toast.warn { background: var(--orange); }
+  .toast.err { background: var(--primary); }
+  @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* ===== 页脚 ===== */
+  .footer { text-align: center; font-size: 12px; color: var(--ink-3); margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--line); }
+
+  /* ===== 输入框 ===== */
+  input[type="text"], input[type="password"] {
+    background: var(--input-bg); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px 14px; font-size: 14px; outline: none;
+    transition: all .2s; width: 100%; font-family: inherit;
+  }
+  input[type="text"]:focus, input[type="password"]:focus {
+    border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-glow);
+  }
+  input[type="text"]::placeholder, input[type="password"]::placeholder { color: var(--ink-3); }
+  label { font-size: 14px; font-weight: 600; color: var(--ink-2); display: block; margin-bottom: 6px; }
+  .input-hint { font-size: 12px; color: var(--ink-3); margin-top: 6px; line-height: 1.6; }
+  .input-hint a { font-weight: 500; }
+
+  /* ===== 响应式 ===== */
+  @media (max-width: 768px) {
+    .wrap { padding: 20px 20px 40px; }
+    .topbar { padding: 20px 20px 18px; }
+    .stepper { flex-wrap: wrap; }
+    .step-chip { font-size: 12px; padding: 12px 8px; }
+    .action-grid { grid-template-columns: repeat(2, 1fr); }
+    .model-select { grid-template-columns: 1fr; }
+    .card { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Toast 提示容器 -->
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <h1>开始生成你的点仔动画吧！</h1>
+    <div class="sub">面向大众点评品牌营销设计团队 · IP 动效生成</div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- 步骤条 -->
+  <div class="stepper">
+    <div class="step-chip active" id="chip1"><span class="n">1</span>上传关键帧</div>
+    <div class="step-chip" id="chip2"><span class="n">2</span>选择动作 & 提示词</div>
+    <div class="step-chip" id="chip3"><span class="n">3</span>生成视频</div>
+  </div>
+
+  <!-- 第一步：上传关键帧 -->
+  <div class="card">
+    <h2>第一步 · 上传关键帧 <span class="tag">1 - 3 张</span></h2>
+    <div class="hint">支持 PNG / JPG，至少 1 张首帧即可生成，最多 3 张。多帧时请按动作顺序上传，可手动标记首帧 / 尾帧。</div>
+
+    <div class="dropzone" id="dropzone">
+      <div class="icon">🖼️</div>
+      <p>拖拽图片到这里，或 <a href="javascript:void(0)">点击选择文件</a></p>
+      <div class="sub">推荐纯绿色背景 #00FF00 · 短边 ≥ 1024px · 比例 1:1 最佳</div>
+      <input type="file" id="fileInput" accept="image/png,image/jpeg" multiple>
+    </div>
+
+    <div class="frames" id="frames"></div>
+  </div>
+
+  <!-- 校验报告（紧跟上传） -->
+  <div class="card">
+    <h2>关键帧校验报告</h2>
+    <div class="hint">上传后自动逐项校验格式、分辨率、比例、背景与 IP 完整性，并与规范对比。</div>
+    <div class="report-summary" id="reportSummary"></div>
+    <div style="overflow-x:auto;">
+      <table class="check-table" id="checkTable"></table>
+    </div>
+  </div>
+
+  <!-- 第二步：选择动作类型 & 生成提示词 -->
+  <div class="card">
+    <h2>第二步 · 选择动作类型 & 生成提示词</h2>
+    <div class="hint">选择点仔的动作类型，系统会基于预设模板自动组装标准化提示词。</div>
+
+    <div class="action-grid" id="actionGrid"></div>
+
+    <div style="margin-top:20px;" id="customWrap" hidden>
+      <label>自定义动作描述</label>
+      <input type="text" id="customAction" placeholder="例如：小熊猫蹲下捡起地上的树叶，动作自然流畅">
+    </div>
+
+    <div class="sub-label"><span class="bar"></span>提示词生成结果</div>
+    <div class="prompt-box" id="promptBox">
+      <span class="hl">小熊猫向前走路，</span><span class="common">保持 IP 大小比例不变，ip露出完整全身，不要被截掉，背景颜色不变，固定背景，固定镜头，简约 3D 建模风格</span><span class="ratio">，1:1</span>
+      <button class="copy-btn" id="copyBtn">复制</button>
+    </div>
+  </div>
+
+  <!-- 第三步：生成视频 -->
+  <div class="card">
+    <h2>第三步 · 生成视频</h2>
+    <div class="hint">选择合适的模型接入生成视频，生成完成后视频会自动下载到本地。</div>
+
+    <div class="model-select" id="modelSelect"></div>
+
+    <!-- 美境登录状态提示 -->
+    <div id="meigenStatusBar" hidden style="margin-top:16px;">
+      <div id="meigenStatusOk" hidden style="font-size:13px;color:#17A34A;background:rgba(0,200,83,0.08);padding:12px 16px;border-radius:10px;border:1px solid rgba(0,200,83,0.15);">
+        ✅ 美境已登录 (<span id="meigenMisId"></span>)
+      </div>
+      <div id="meigenStatusErr" hidden style="font-size:13px;color:#D0312D;background:rgba(255,74,71,0.06);padding:12px 16px;border-radius:10px;line-height:1.6;border:1px solid rgba(255,74,71,0.15);">
+        ❌ 美境未登录，无法使用 Seedance 模型。<br>
+        请在终端运行 <code style="background:#1a1a1a;padding:3px 8px;border-radius:4px;font-size:12px;border:1px solid var(--line);">meigen login</code> 完成登录后刷新页面。
+      </div>
+    </div>
+
+    <div id="apiKeyWrap" hidden style="margin-top:20px;">
+      <!-- 阿里云百炼 Happy Horse -->
+      <div id="dashscopeKeyWrap" hidden>
+        <label>阿里云百炼 API Key</label>
+        <input type="password" id="apiKey" placeholder="sk-xxxx（在阿里云百炼控制台「API-KEY 管理」获取）">
+        <div class="input-hint">
+          开通地址：<a href="https://bailian.console.aliyun.com/" target="_blank">bailian.console.aliyun.com</a>，Key 仅保存在当前浏览器页面，不会写入任何文件。
+        </div>
+      </div>
+
+      <!-- 可灵 Kling 3.0 -->
+      <div id="klingKeyWrap" hidden>
+        <label>可灵 AccessKey</label>
+        <input type="password" id="klingAccessKey" placeholder="在可灵开放平台「密钥管理」获取（AK）">
+        <label style="margin-top:14px;">可灵 SecretKey</label>
+        <input type="password" id="klingSecretKey" placeholder="与 AccessKey 对应的密钥（SK）">
+        <div class="input-hint">
+          获取地址：<a href="https://platform.klingai.com/" target="_blank">platform.klingai.com</a>（创建应用后获取 AK + SK），密钥仅保存在当前浏览器页面。
+        </div>
+      </div>
+
+      <!-- 火山方舟 即梦 Seedance 2.5 -->
+      <div id="arkKeyWrap" hidden>
+        <label>火山方舟 API Key</label>
+        <input type="password" id="arkApiKey" placeholder="在火山方舟控制台「API Key 管理」获取">
+        <label style="margin-top:14px;">模型 ID（可选）</label>
+        <input type="text" id="arkModelId" placeholder="Doubao-Seedance-2.5（如后台显示带版本号的 ID 请以实际为准）">
+        <div class="input-hint">
+          获取地址：<a href="https://console.volcengine.com/ark" target="_blank">console.volcengine.com/ark</a>（需开通 Seedance 2.5 模型，账户余额 > 200 元或购买资源包），Key 仅保存在当前浏览器页面。
+        </div>
+      </div>
+
+      <!-- 即梦 Jimeng Seedance 2.0 fast VIP（火山方舟平台） -->
+      <div id="jimengKeyWrap" hidden>
+        <label>即梦 API Key</label>
+        <input type="password" id="jimengApiKey" placeholder="在火山方舟控制台「API Key 管理」获取">
+        <label style="margin-top:14px;">模型 ID（可选）</label>
+        <input type="text" id="jimengModelId" placeholder="Doubao-Seedance-2.0-fast（如控制台显示带版本号的 ID 请以实际为准）">
+        <div class="input-hint">
+          接入火山方舟平台（和 Seedance 2.5 同一套接口），Key 仅保存在当前浏览器页面。
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-green" id="genBtn" style="margin-top:20px;" disabled>🚀 生成视频</button>
+
+    <div class="progress-wrap" id="progressWrap" hidden>
+      <div class="progress-bar"><div class="fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText">正在提交生成任务…</div>
+    </div>
+
+    <div class="video-result" id="videoResult" hidden>
+      <div class="placeholder">视频生成中 / 结果占位区</div>
+    </div>
+
+    <div class="note">
+      <strong>接入说明：</strong>已接入六套视频生成能力——<strong>美境 Seedance 2.0 / mini</strong>（关键帧自动上传美境 S3，首次使用 meigen-cli 需在大象确认授权）、<strong>即梦 Seedance 2.0 fast VIP</strong>（火山引擎视觉平台，需填入 AccessKey + SecretKey）、<strong>阿里云百炼 Happy Horse 1.1</strong>（填入百炼 API Key）、<strong>可灵 Kling 3.0</strong>（填入 AccessKey + SecretKey，多帧自动走首尾帧）、<strong>即梦 Seedance 2.5</strong>（填入火山方舟 API Key）。视频生成耗时约 5-20 分钟。
+    </div>
+  </div>
+
+  <div class="footer">点仔动效生成工具 · 关键帧规范与提示词规范来自团队沉淀文档</div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ===== 常量 =====
+  const ALLOWED_RATIOS = [
+    { label: "1:1", w: 1, h: 1 },
+    { label: "16:9", w: 16, h: 9 },
+    { label: "9:16", w: 9, h: 16 },
+    { label: "4:3", w: 4, h: 3 },
+    { label: "3:4", w: 3, h: 4 },
+  ];
+  const BG_COLORS = [
+    { name: "纯绿色 #00FF00（推荐）", rgb: [0, 255, 0], tol: 60 },
+    { name: "纯蓝色 #0000FF（备选）", rgb: [0, 0, 255], tol: 60 },
+    { name: "纯黑色 #000000（备选）", rgb: [0, 0, 0], tol: 40 },
+  ];
+
+  // 通用提示词（固定，始终拼接到提示词中）
+  const COMMON_PROMPT = "保持 IP 大小比例不变，ip露出完整全身，不要被截掉，背景颜色不变，固定背景，固定镜头，简约 3D 建模风格";
+
+  const ACTIONS = [
+    { id: "walk",  name: "走路", emoji: "🚶", frames: "2-3 帧",
+      desc: "小熊猫向前走路", action: "小熊猫向前走路，" },
+    { id: "turn",  name: "转身走路", emoji: "🔄", frames: "2-3 帧",
+      desc: "小熊猫自然的转身向后走", action: "小熊猫自然的转身向后走，动作流畅，" },
+    { id: "wave",  name: "打招呼", emoji: "👋", frames: "1-2 帧",
+      desc: "小熊猫轻微挥手打招呼", action: "小熊猫轻微挥手打招呼，身体不动，" },
+    { id: "breath", name: "呼吸感微动效", emoji: "🌬️", frames: "1 帧",
+      desc: "站立状态下轻微呼吸起伏", action: "小熊猫站立状态下轻微呼吸，身体微微起伏，幅度很小，" },
+    { id: "thumbsup", name: "点赞", emoji: "👍", frames: "1-2 帧",
+      desc: "小熊猫举起手做出点赞手势", action: "小熊猫举起手做出点赞手势，表情开心，" },
+    { id: "cheerjump", name: "欢呼跳跃", emoji: "🎉", frames: "2-3 帧",
+      desc: "小熊猫开心跳跃欢呼", action: "小熊猫开心跳跃欢呼，动作活泼有力，" },
+    { id: "custom", name: "自定义", emoji: "✏️", frames: "自定",
+      desc: "自行描述动作", action: "" },
+  ];
+
+  const MODELS = [
+    { id: "seedance20", name: "Seedance 2.0", desc: "美境 · 效果最佳，时长约 10-20 分钟", model: "doubao-seedance-2.0", type: "meigen" },
+    { id: "seedance20mini", name: "Seedance 2.0 mini", desc: "美境 · 速度快，适合快速预览", model: "doubao-seedance-2.0-mini", type: "meigen" },
+    { id: "seedance20fastvip", name: "即梦 Seedance 2.0 fast VIP", desc: "即梦 · 极速 VIP 通道，生成更快", model: "Doubao-Seedance-2.0-fast", type: "jimeng" },
+    { id: "happyhorse", name: "Happy Horse 1.1", desc: "阿里云百炼 · 多参考图保持 IP 一致", model: "happyhorse-1.1", type: "dashscope" },
+    { id: "kling30", name: "可灵 Kling 3.0", desc: "快手可灵 · 首尾帧控制，需 AK + SK", model: "kling-v3", type: "kling" },
+    { id: "seedance25", name: "即梦 Seedance 2.5", desc: "火山方舟 · 电影级长叙事，需 API Key", model: "Doubao-Seedance-2.5", type: "ark" },
+  ];
+
+  // ===== 状态 =====
+  let frames = [];      // { id, file, img, url, remoteUrl, width, height, ratioLabel, check, uploading }
+  let selectedAction = "walk";
+  let selectedModel = "seedance20";
+  let frameSeq = 0;
+  const API_BASE = ""; // 同域，空字符串即可
+
+  // ===== DOM =====
+  const $ = (s) => document.querySelector(s);
+  const dropzone = $("#dropzone");
+  const fileInput = $("#fileInput");
+  const framesEl = $("#frames");
+  const actionGrid = $("#actionGrid");
+  const customWrap = $("#customWrap");
+  const customAction = $("#customAction");
+  const checkTable = $("#checkTable");
+  const reportSummary = $("#reportSummary");
+  const promptBox = $("#promptBox");
+  const modelSelect = $("#modelSelect");
+  const genBtn = $("#genBtn");
+  const progressWrap = $("#progressWrap");
+  const progressFill = $("#progressFill");
+  const progressText = $("#progressText");
+  const videoResult = $("#videoResult");
+const apiKeyWrap = $("#apiKeyWrap");
+const apiKeyInput = $("#apiKey");
+const dashscopeKeyWrap = $("#dashscopeKeyWrap");
+const klingKeyWrap = $("#klingKeyWrap");
+const klingAccessKey = $("#klingAccessKey");
+const klingSecretKey = $("#klingSecretKey");
+const arkKeyWrap = $("#arkKeyWrap");
+const arkApiKey = $("#arkApiKey");
+const arkModelId = $("#arkModelId");
+const jimengKeyWrap = $("#jimengKeyWrap");
+const jimengApiKey = $("#jimengApiKey");
+const jimengModelId = $("#jimengModelId");
+const meigenStatusBar = $("#meigenStatusBar");
+const meigenStatusOk = $("#meigenStatusOk");
+const meigenStatusErr = $("#meigenStatusErr");
+
+  // ===== 工具 =====
+  function ratioKey(w, h) {
+    const g = gcd(w, h);
+    return (w/g) + ":" + (h/g);
+  }
+  function gcd(a, b) { return b ? gcd(b, a % b) : a; }
+
+  function loadImage(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => resolve({ img, url });
+      img.onerror = () => reject(new Error("图片加载失败"));
+      img.src = url;
+    });
+  }
+
+  // ===== 校验逻辑 =====
+  function validateImage(frame) {
+    const { width, height } = frame;
+    const checks = {};
+
+    // 格式
+    const ext = frame.file.name.split(".").pop().toLowerCase();
+    checks.format = { pass: (ext === "png" || ext === "jpg" || ext === "jpeg"), text: "PNG / JPG" };
+
+    // 分辨率
+    const short = Math.min(width, height);
+    checks.resolution = { pass: short >= 1024, text: `${width}×${height}（短边 ${short}px）` };
+
+    // 比例
+    const rk = ratioKey(width, height);
+    const ratioHit = ALLOWED_RATIOS.find(r => r.label === rk);
+    checks.ratio = { pass: !!ratioHit, text: rk + (ratioHit ? "" : "（不在允许列表）") };
+    frame.ratioLabel = rk;
+
+    // 背景检测（异步，采样边缘像素）
+    return checks;
+  }
+
+  function analyzeBackground(canvas, width, height) {
+    const ctx = canvas.getContext("2d");
+    // 采样四角 + 四边中点
+    const pts = [
+      [2, 2], [width-3, 2], [2, height-3], [width-3, height-3],
+      [Math.floor(width/2), 2], [Math.floor(width/2), height-3],
+      [2, Math.floor(height/2)], [width-3, Math.floor(height/2)],
+    ];
+    const samples = pts.map(([x, y]) => {
+      const d = ctx.getImageData(x, y, 1, 1).data;
+      return [d[0], d[1], d[2]];
+    });
+    // 均匀度：样本间最大差异
+    let maxDiff = 0;
+    for (let i = 0; i < samples.length; i++) {
+      for (let j = i+1; j < samples.length; j++) {
+        const d = Math.abs(samples[i][0]-samples[j][0]) + Math.abs(samples[i][1]-samples[j][1]) + Math.abs(samples[i][2]-samples[j][2]);
+        if (d > maxDiff) maxDiff = d;
+      }
+    }
+    const uniform = maxDiff < 60;
+    // 平均背景色
+    const avg = samples.reduce((a, s) => [a[0]+s[0], a[1]+s[1], a[2]+s[2]], [0,0,0]).map(v => Math.round(v / samples.length));
+    // 匹配推荐背景色
+    const match = BG_COLORS.find(bc => colorDist(avg, bc.rgb) < bc.tol);
+    return { uniform, avg, maxDiff, match };
+  }
+
+  function colorDist(a, b) {
+    return Math.abs(a[0]-b[0]) + Math.abs(a[1]-b[1]) + Math.abs(a[2]-b[2]);
+  }
+
+  function analyzeOccupancy(canvas, width, height, bgAvg) {
+    // 估算 IP 占画面比例：找到非背景像素的上下左右最宽位置，画外接正方形
+    const ctx = canvas.getContext("2d");
+    const data = ctx.getImageData(0, 0, width, height).data;
+    let minX = width, maxX = 0, minY = height, maxY = 0;
+    let found = false;
+    const threshold = 80;
+    const step = Math.max(1, Math.floor(width * height / 500000)); // 采样步长，兼顾性能
+
+    for (let y = 0; y < height; y += step) {
+      for (let x = 0; x < width; x += step) {
+        const i = (y * width + x) * 4;
+        const r = data[i], g = data[i+1], b = data[i+2];
+        if (colorDist([r,g,b], bgAvg) > threshold) {
+          found = true;
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+
+    if (!found) return { occupancy: 0, side: 0, bbox: null };
+
+    const bboxW = maxX - minX;
+    const bboxH = maxY - minY;
+    const side = Math.max(bboxW, bboxH);
+    const squareArea = side * side;
+    const totalArea = width * height;
+    const occupancy = squareArea / totalArea;
+
+    return { occupancy, side, bbox: { minX, maxX, minY, maxY } };
+  }
+
+  // ===== 渲染 =====
+  function renderActions() {
+    actionGrid.innerHTML = "";
+    ACTIONS.forEach(a => {
+      const el = document.createElement("div");
+      el.className = "action-card" + (a.id === selectedAction ? " sel" : "");
+      el.innerHTML = `<div class="emoji">${a.emoji}</div>
+        <div class="name">${a.name}</div>
+        <div class="desc">${a.desc}</div>`;
+      el.onclick = () => selectAction(a.id);
+      actionGrid.appendChild(el);
+    });
+    customWrap.hidden = selectedAction !== "custom";
+    renderPrompt();
+  }
+
+  function selectAction(id) {
+    selectedAction = id;
+    renderActions();
+    updateStepper();
+  }
+
+  // 美境登录状态检测
+  async function checkMeigenStatus() {
+    try {
+      const resp = await fetch(`${API_BASE}/api/meigen-status`);
+      const data = await resp.json();
+      const isMeigenModel = selectedModel === "seedance20" || selectedModel === "seedance20mini";
+      if (!isMeigenModel) {
+        meigenStatusBar.hidden = true;
+        return;
+      }
+      meigenStatusBar.hidden = false;
+      if (data.success && data.logged_in) {
+        meigenStatusOk.hidden = false;
+        meigenStatusErr.hidden = true;
+        document.getElementById("meigenMisId").textContent = data.mis_id || "";
+      } else {
+        meigenStatusOk.hidden = true;
+        meigenStatusErr.hidden = false;
+      }
+    } catch (e) {
+      meigenStatusBar.hidden = true;
+    }
+  }
+
+  function renderModels() {
+    modelSelect.innerHTML = "";
+    MODELS.forEach(m => {
+      const el = document.createElement("div");
+      el.className = "model-card" + (m.id === selectedModel ? " sel" : "");
+      el.innerHTML = `<span class="m-radio">✓</span>
+        <div class="m-name">${m.name}</div>
+        <div class="m-desc">${m.desc}</div>`;
+      el.onclick = () => { selectedModel = m.id; renderModels(); };
+      modelSelect.appendChild(el);
+    });
+    // 根据所选模型类型，显示对应的密钥输入区
+    const cfg = MODELS.find(m => m.id === selectedModel) || {};
+    const type = cfg.type;
+    const needKey = type === "dashscope" || type === "kling" || type === "ark" || type === "jimeng";
+    apiKeyWrap.hidden = !needKey;
+    dashscopeKeyWrap.hidden = type !== "dashscope";
+    klingKeyWrap.hidden = type !== "kling";
+    arkKeyWrap.hidden = type !== "ark";
+    jimengKeyWrap.hidden = type !== "jimeng";
+    // 检测美境登录状态
+    checkMeigenStatus();
+  }
+
+  function renderFrames() {
+    framesEl.innerHTML = "";
+    frames.forEach((f, idx) => {
+      const el = document.createElement("div");
+      el.className = "frame-card";
+      const badge = idx === 0 ? "首帧" : (idx === frames.length-1 ? "尾帧" : "中间帧");
+      const badgeCls = idx === 0 ? "first" : (idx === frames.length-1 ? "last" : "mid");
+      const uploadStatus = f.uploading ? "⏳ 上传中…" : (f.uploadSuccess ? "✅ 已上传" : "❌ 上传失败");
+      el.innerHTML = `
+        <div class="imgbox">
+          <img src="${f.url}">
+          <span class="badge ${badgeCls}">${badge}</span>
+          <button class="rm" title="移除">×</button>
+        </div>
+        <div class="meta">
+          <div class="row"><span>${f.file.name.length > 16 ? f.file.name.slice(0,14)+"…" : f.file.name}</span></div>
+          <div class="row dim"><span>${f.width}×${f.height}</span><span>${f.ratioLabel}</span></div>
+          <div class="row dim" style="margin-top:2px;font-size:11px;">${uploadStatus}</div>
+        </div>`;
+      el.querySelector(".rm").onclick = (e) => { e.stopPropagation(); removeFrame(idx); };
+      framesEl.appendChild(el);
+    });
+  }
+
+  function removeFrame(idx) {
+    URL.revokeObjectURL(frames[idx].url);
+    frames.splice(idx, 1);
+    renderFrames();
+    runAllChecks();
+  }
+
+  // ===== 上传处理 =====
+  dropzone.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", (e) => { handleFiles(e.target.files); fileInput.value = ""; });
+  dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("drag"); });
+  dropzone.addEventListener("dragleave", () => dropzone.classList.remove("drag"));
+  dropzone.addEventListener("drop", (e) => {
+    e.preventDefault(); dropzone.classList.remove("drag");
+    handleFiles(e.dataTransfer.files);
+  });
+
+  async function handleFiles(fileList) {
+    const files = Array.from(fileList).filter(f => f.type === "image/png" || f.type === "image/jpeg");
+    if (!files.length) return;
+    const remain = 3 - frames.length;
+    if (remain <= 0) { showToast("最多上传 3 张关键帧", "warn"); return; }
+    const add = files.slice(0, remain);
+
+    genBtn.disabled = true; // 上传过程中禁用生成按钮
+    for (const file of add) {
+      const { img, url } = await loadImage(file);
+      const frame = {
+        id: ++frameSeq, file, url, img,
+        remoteUrl: null, uploading: true, uploadSuccess: false,
+        width: img.naturalWidth, height: img.naturalHeight,
+        ratioLabel: ratioKey(img.naturalWidth, img.naturalHeight)
+      };
+      frames.push(frame);
+      renderFrames();
+
+      // 异步上传到美境 S3
+      await uploadFrameToRemote(frame);
+    }
+    genBtn.disabled = false; // 上传完成后启用生成按钮
+    await runAllChecks();
+    updateStepper();
+    renderPrompt();
+  }
+
+  async function uploadFrameToRemote(frame) {
+    try {
+      const form = new FormData();
+      form.append("file", frame.file);
+      const resp = await fetch(`${API_BASE}/api/upload`, { method: "POST", body: form });
+      const data = await resp.json();
+      if (data.success) {
+        frame.remoteUrl = data.url;
+        frame.uploadName = data.filename;
+        frame.uploadSuccess = true;
+      } else {
+        frame.remoteUrl = null;
+        frame.uploadSuccess = false;
+        console.error("上传失败:", data.error);
+      }
+    } catch (err) {
+      frame.remoteUrl = null;
+      frame.uploadSuccess = false;
+      console.error("上传异常:", err);
+    } finally {
+      frame.uploading = false;
+      renderFrames();
+    }
+  }
+
+  // ===== 校验执行 =====
+  async function runAllChecks() {
+    if (!frames.length) {
+      reportSummary.innerHTML = `<span class="pill idle">⏳ 等待上传关键帧</span>`;
+      checkTable.innerHTML = `<tr><td colspan="3" style="color:var(--ink-3);">请先上传关键帧图片。</td></tr>`;
+      return;
+    }
+
+    // 对每张图做同步校验
+    frames.forEach(f => { f.check = validateImage(f); });
+
+    // 背景分析（每张图）
+    await Promise.all(frames.map(async f => {
+      const canvas = document.createElement("canvas");
+      const scale = Math.min(1, 400 / Math.max(f.width, f.height));
+      canvas.width = Math.round(f.width * scale);
+      canvas.height = Math.round(f.height * scale);
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(f.img, 0, 0, canvas.width, canvas.height);
+      const bg = analyzeBackground(canvas, canvas.width, canvas.height);
+      const occResult = analyzeOccupancy(canvas, canvas.width, canvas.height, bg.avg);
+      f.bg = bg;
+      f.occupancy = occResult.occupancy;
+    }));
+
+    // 帧间一致性
+    const sizes = frames.map(f => f.width + "x" + f.height);
+    const allSameSize = new Set(sizes).size === 1;
+
+    // 渲染报告
+    renderReport(allSameSize);
+  }
+
+  function renderReport(allSameSize) {
+    let passCount = 0, warnCount = 0, failCount = 0;
+
+    const rows = [];
+    const addRow = (label, status, text) => {
+      if (status === "pass") passCount++;
+      else if (status === "warn") warnCount++;
+      else if (status === "fail") failCount++;
+      rows.push({ label, status, text });
+    };
+
+    frames.forEach((f, idx) => {
+      const tag = idx === 0 ? "首帧" : (idx === frames.length-1 ? "尾帧" : "中间帧");
+      const c = f.check;
+      addRow(`${tag} · 文件格式`, c.format.pass ? "pass" : "fail", c.format.text);
+      addRow(`${tag} · 分辨率`, c.resolution.pass ? "pass" : "fail", c.resolution.text);
+      addRow(`${tag} · 画面比例`, c.ratio.pass ? "pass" : "fail", c.ratio.text);
+
+      // 背景
+      if (f.bg) {
+        if (f.bg.match) {
+          addRow(`${tag} · 背景`, "pass", `匹配 ${f.bg.match.name}（${f.bg.uniform ? "均匀" : "略有不均"}）`);
+        } else if (!f.bg.uniform) {
+          addRow(`${tag} · 背景`, "warn", `边缘色差不均匀（Δ${f.bg.maxDiff}），建议纯色背景`);
+        } else {
+          addRow(`${tag} · 背景`, "warn", `背景色 RGB(${f.bg.avg.join(",")}) 不在推荐色内，建议纯绿/蓝/黑`);
+        }
+      }
+
+      // IP 占比（外接正方形法）
+      if (f.occupancy !== undefined) {
+        const pct = Math.round(f.occupancy * 100);
+        const inRange = pct >= 40;
+        addRow(`${tag} · IP 占比(估算)`, inRange ? "pass" : "warn", `约 ${pct}%（外接正方形面积占比，要求 ≥40%）`);
+      }
+    });
+
+    // 帧间一致性
+    addRow("帧间 · 尺寸一致性", allSameSize ? "pass" : "fail", allSameSize ? "所有帧尺寸一致" : "各帧尺寸不一致（硬性要求：同一比例同一尺寸）");
+
+    // 汇总
+    let summary;
+    if (failCount > 0) summary = `<span class="pill bad">❌ ${failCount} 项不通过</span>`;
+    else if (warnCount > 0) summary = `<span class="pill warn">⚠️ ${warnCount} 项需注意</span>`;
+    else summary = `<span class="pill ok">✅ 全部通过</span>`;
+    summary += `<span class="pill ok">✅ ${passCount} 项通过</span>`;
+    if (warnCount > 0) summary += `<span class="pill warn">⚠️ ${warnCount} 项警告</span>`;
+    if (failCount > 0) summary += `<span class="pill bad">❌ ${failCount} 项失败</span>`;
+    reportSummary.innerHTML = summary;
+
+    const icon = { pass: "✅", warn: "⚠️", fail: "❌", none: "—" };
+    const cls = { pass: "pass", warn: "warn", fail: "fail", none: "none" };
+    checkTable.innerHTML = rows.map(r =>
+      `<tr><th>${r.label}</th><td class="status"><span class="st ${cls[r.status]}">${icon[r.status]} ${r.status === "pass" ? "通过" : r.status === "warn" ? "注意" : "不通过"}</span></td><td>${r.text}</td></tr>`
+    ).join("");
+
+    // 只有无失败项时才允许生成；存在失败项时禁用生成按钮
+    genBtn.disabled = failCount > 0;
+  }
+
+  // ===== 提示词生成 =====
+  function renderPrompt() {
+    const action = ACTIONS.find(a => a.id === selectedAction);
+    let actionDesc = action.action.replace(/，$/, "");
+    if (selectedAction === "custom") {
+      actionDesc = (customAction.value.trim() || "（请填写动作描述）").replace(/，$/, "");
+    }
+
+    // 比例：根据上传的第一张图片比例自动读取
+    const ratio = frames.length ? frames[0].ratioLabel : "1:1";
+
+    // 组装完整提示词（动作 + 通用 + 比例）
+    const parts = [actionDesc];
+    parts.push(COMMON_PROMPT);
+    parts.push(ratio);
+    const full = parts.join("，");
+
+    // 展示（不同颜色区分各部分）
+    const actionHtml = `<span class="hl">${escHtml(actionDesc)}</span>`;
+    const commonHtml = `<span class="common">，${escHtml(COMMON_PROMPT)}</span>`;
+    const ratioHtml = `<span class="ratio">，${escHtml(ratio)}</span>`;
+
+    promptBox.innerHTML = actionHtml + commonHtml + ratioHtml +
+      `<button class="copy-btn" id="copyBtn">复制</button>`;
+    $("#copyBtn").onclick = () => copyPrompt(full);
+    promptBox.dataset.prompt = full;
+  }
+
+  customAction.addEventListener("input", renderPrompt);
+
+  function escHtml(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+  // Toast 提示
+  function showToast(msg, type="ok") {
+    const container = document.getElementById("toastContainer");
+    const el = document.createElement("div");
+    el.className = "toast " + type;
+    el.textContent = msg;
+    container.appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+  }
+
+  function copyPrompt(text) {
+    const t = text || promptBox.dataset.prompt;
+    (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => {
+      const btn = $("#copyBtn"); btn.textContent = "已复制 ✓"; setTimeout(() => btn.textContent = "复制", 1500);
+    }).catch(() => {
+      const ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select();
+      document.execCommand("copy"); document.body.removeChild(ta);
+      const btn = $("#copyBtn"); btn.textContent = "已复制 ✓"; setTimeout(() => btn.textContent = "复制", 1500);
+    });
+  }
+
+  // ===== 生成视频（真实调用后端） =====
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  // 下载视频到本地并展示播放器
+  async function showVideoPlayer(videoUrl, providerName) {
+    progressText.textContent = "视频生成完成，正在下载到本地…";
+    videoResult.innerHTML = `<div class="placeholder">⬇️ 正在下载视频到本地…<br><span style="font-size:12px;color:#999;">请稍候</span></div>`;
+
+    try {
+      const resp = await fetch(`${API_BASE}/api/download-video`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ video_url: videoUrl }),
+      });
+      const data = await resp.json();
+
+      if (!data.success) {
+        videoResult.innerHTML = `<div class="placeholder">⚠️ 视频下载失败<br>${escHtml(data.error || "")}<br><br><a href="${videoUrl}" target="_blank" style="color:#FF7A45;font-weight:600;">直接打开原链接</a></div>`;
+        return;
+      }
+
+      const localUrl = data.local_url;
+      const filename = data.filename;
+
+      progressText.textContent = "视频已就绪！";
+      videoResult.innerHTML = `<video src="${localUrl}" controls autoplay playsinline></video>`;
+
+      // 添加下载信息栏
+      const infoBar = document.createElement("div");
+      infoBar.className = "video-info";
+      infoBar.innerHTML = `
+        <div class="video-status"><span class="ok">✅</span> ${providerName} 视频已生成并下载到本地</div>
+        <div class="video-actions">
+          <a class="btn-sm btn-download" href="${localUrl}" download="${filename}">⬇️ 下载视频</a>
+          <a class="btn-sm btn-secondary" href="${videoUrl}" target="_blank">🔗 原链接</a>
+        </div>
+      `;
+      videoResult.parentNode.insertBefore(infoBar, videoResult.nextSibling);
+    } catch (err) {
+      videoResult.innerHTML = `<div class="placeholder">⚠️ 下载过程出错<br>${escHtml(String(err))}<br><br><a href="${videoUrl}" target="_blank" style="color:#FF7A45;font-weight:600;">直接打开原链接</a></div>`;
+    }
+  }
+
+  genBtn.addEventListener("click", async () => {
+    if (!frames.length) { showToast("请先上传关键帧", "warn"); return; }
+
+    // 清理旧的视频信息栏
+    document.querySelectorAll(".video-info").forEach(el => el.remove());
+
+    const notUploaded = frames.filter(f => !f.uploadSuccess);
+    if (notUploaded.length > 0) {
+      showToast("还有关键帧未上传完成，请等待上传完成后再试。", "warn");
+      return;
+    }
+
+    const modelCfg = MODELS.find(m => m.id === selectedModel);
+    // 美境模型需要 remoteUrl（S3 上传成功），非美境模型只需要本地文件
+    if (modelCfg.type === "meigen") {
+      const noRemoteUrl = frames.filter(f => !f.remoteUrl);
+      if (noRemoteUrl.length > 0) {
+        showToast("美境模型需要 S3 上传成功，请检查 meigen login 状态", "warn");
+        return;
+      }
+    }
+
+    const prompt = promptBox.dataset.prompt;
+
+    genBtn.disabled = true;
+    progressWrap.hidden = false;
+    videoResult.hidden = false;
+    progressFill.style.width = "5%";
+    progressText.textContent = "正在提交生成任务…";
+
+    try {
+      if (modelCfg.type === "dashscope") {
+        await generateDashscope(prompt, modelCfg);
+      } else if (modelCfg.type === "kling") {
+        await generateKling(prompt, modelCfg);
+      } else if (modelCfg.type === "ark") {
+        await generateArk(prompt, modelCfg);
+      } else if (modelCfg.type === "jimeng") {
+        await generateJimeng(prompt, modelCfg);
+      } else {
+        await generateMeigen(prompt, modelCfg);
+      }
+    } catch (err) {
+      progressFill.style.width = "100%";
+      progressText.textContent = "请求异常";
+      videoResult.innerHTML = `<div class="placeholder">❌ 请求异常<br>${escHtml(String(err))}</div>`;
+    } finally {
+      genBtn.disabled = false;
+    }
+  });
+
+  // 美境 Seedance 生成（占位符 + 引用行协议）
+  async function generateMeigen(prompt, modelCfg) {
+    const imageRefs = frames.map((f, i) => `[@image:#${i+1}]`).join(" ");
+    const refs = frames.map((f, i) => `For Image #${i+1}: URL: ${f.remoteUrl}`).join("\n");
+    const fullPrompt = `${imageRefs} ${prompt}\n${refs}`;
+
+    const submitResp = await fetch(`${API_BASE}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: fullPrompt, model: modelCfg.model }),
+    });
+    const submitData = await submitResp.json();
+
+    if (!submitData.success) {
+      progressText.textContent = "提交失败: " + (submitData.error || "未知错误");
+      videoResult.innerHTML = `<div class="placeholder">❌ 提交失败<br>${escHtml(submitData.error || "")}</div>`;
+      return;
+    }
+
+    progressFill.style.width = "30%";
+    progressText.textContent = `任务已提交 (session=${submitData.sessionId})，等待创作中…`;
+
+    const pollResp = await fetch(`${API_BASE}/api/poll/${submitData.sessionId}/${submitData.assistantMessageId}`);
+    const pollData = await pollResp.json();
+
+    if (pollData.success && pollData.status === "video_generating") {
+      progressFill.style.width = "100%";
+      progressText.textContent = "视频已开始生成！";
+      videoResult.innerHTML = `<div class="placeholder">
+        ✅ 视频已开始生成<br><br>
+        由于视频生成耗时较长（约 10-20 分钟），请前往美境 web 端查看进度：<br>
+        <a href="${pollData.url}" target="_blank" style="color:#FF7A45;font-weight:600;">${pollData.url}</a>
+      </div>`;
+    } else {
+      progressFill.style.width = "100%";
+      progressText.textContent = "生成异常";
+      videoResult.innerHTML = `<div class="placeholder">❌ 生成异常<br>${escHtml(pollData.error || "未知错误")}</div>`;
+    }
+  }
+
+  // 阿里云百炼 Happy Horse 1.1 生成
+  async function generateDashscope(prompt, modelCfg) {
+    const apiKey = apiKeyInput.value.trim();
+    if (!apiKey) {
+      progressText.textContent = "请先填入阿里云百炼 API Key";
+      videoResult.innerHTML = `<div class="placeholder">⚠️ 请先在上方填入阿里云百炼 API Key</div>`;
+      return;
+    }
+
+    const filenames = frames.map(f => f.uploadName).filter(Boolean);
+    const ratio = frames.length ? frames[0].ratioLabel : "1:1";
+
+    const submitResp = await fetch(`${API_BASE}/api/generate-dashscope`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, api_key: apiKey, filenames, ratio, duration: 5 }),
+    });
+    const submitData = await submitResp.json();
+
+    if (!submitData.success) {
+      progressText.textContent = "提交失败";
+      videoResult.innerHTML = `<div class="placeholder">❌ 提交失败<br>${escHtml(submitData.error || "")}</div>`;
+      return;
+    }
+
+    progressFill.style.width = "30%";
+    progressText.textContent = `任务已提交（${submitData.model}），正在生成视频…`;
+
+    await pollDashscope(submitData.task_id, apiKey);
+  }
+
+  // 轮询 DashScope 任务直到完成
+  async function pollDashscope(taskId, apiKey) {
+    const maxAttempts = 120; // 最多约 10 分钟
+    for (let i = 0; i < maxAttempts; i++) {
+      await sleep(5000);
+      const resp = await fetch(`${API_BASE}/api/poll-dashscope/${taskId}?api_key=${encodeURIComponent(apiKey)}`);
+      const data = await resp.json();
+
+      if (!data.success) {
+        progressFill.style.width = "100%";
+        progressText.textContent = "生成失败";
+        videoResult.innerHTML = `<div class="placeholder">❌ 生成失败<br>${escHtml(data.error || "未知错误")}</div>`;
+        return;
+      }
+
+      if (data.status === "succeeded") {
+        progressFill.style.width = "100%";
+        progressText.textContent = "视频生成完成！";
+        await showVideoPlayer(data.video_url, "阿里云百炼");
+        return;
+      }
+
+      const pct = Math.min(90, 30 + i * 2);
+      progressFill.style.width = pct + "%";
+      progressText.textContent = `视频生成中…（${data.task_status || "RUNNING"}）已等待 ${(i + 1) * 5} 秒`;
+    }
+
+    progressText.textContent = "轮询超时";
+    videoResult.innerHTML = `<div class="placeholder">⏱️ 轮询超时，视频可能仍在生成，请稍后在阿里云百炼控制台查看</div>`;
+  }
+
+  // 可灵 Kling 3.0 生成
+  async function generateKling(prompt, modelCfg) {
+    const accessKey = klingAccessKey.value.trim();
+    const secretKey = klingSecretKey.value.trim();
+    if (!accessKey || !secretKey) {
+      progressText.textContent = "请先填入可灵 AccessKey 和 SecretKey";
+      videoResult.innerHTML = `<div class="placeholder">⚠️ 可灵需要 AccessKey + SecretKey 两个密钥，请先在上方填入</div>`;
+      return;
+    }
+
+    const filenames = frames.map(f => f.uploadName).filter(Boolean);
+    const ratio = frames.length ? frames[0].ratioLabel : "1:1";
+
+    const submitResp = await fetch(`${API_BASE}/api/generate-kling`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, access_key: accessKey, secret_key: secretKey, filenames, ratio, duration: 5 }),
+    });
+    const submitData = await submitResp.json();
+
+    if (!submitData.success) {
+      progressText.textContent = "提交失败";
+      videoResult.innerHTML = `<div class="placeholder">❌ 提交失败<br>${escHtml(submitData.error || "")}</div>`;
+      return;
+    }
+
+    progressFill.style.width = "30%";
+    progressText.textContent = `任务已提交（${submitData.model}），正在生成视频…`;
+
+    await pollKling(submitData.task_id, accessKey, secretKey);
+  }
+
+  // 轮询可灵任务
+  async function pollKling(taskId, accessKey, secretKey) {
+    const maxAttempts = 150;
+    for (let i = 0; i < maxAttempts; i++) {
+      await sleep(5000);
+      const resp = await fetch(`${API_BASE}/api/poll-kling/${taskId}?access_key=${encodeURIComponent(accessKey)}&secret_key=${encodeURIComponent(secretKey)}`);
+      const data = await resp.json();
+
+      if (!data.success) {
+        progressFill.style.width = "100%";
+        progressText.textContent = "生成失败";
+        videoResult.innerHTML = `<div class="placeholder">❌ 生成失败<br>${escHtml(data.error || "未知错误")}</div>`;
+        return;
+      }
+
+      if (data.status === "succeeded") {
+        progressFill.style.width = "100%";
+        progressText.textContent = "视频生成完成！";
+        await showVideoPlayer(data.video_url, "可灵 Kling");
+        return;
+      }
+
+      const pct = Math.min(90, 30 + i * 2);
+      progressFill.style.width = pct + "%";
+      progressText.textContent = `视频生成中…（${data.task_status || "processing"}）已等待 ${(i + 1) * 5} 秒`;
+    }
+
+    progressText.textContent = "轮询超时";
+    videoResult.innerHTML = `<div class="placeholder">⏱️ 轮询超时，视频可能仍在生成，请稍后在可灵开放平台查看</div>`;
+  }
+
+  // 火山方舟即梦 Seedance 2.5 生成
+  async function generateArk(prompt, modelCfg) {
+    const apiKey = arkApiKey.value.trim();
+    if (!apiKey) {
+      progressText.textContent = "请先填入火山方舟 API Key";
+      videoResult.innerHTML = `<div class="placeholder">⚠️ 请先在上方填入火山方舟 API Key</div>`;
+      return;
+    }
+    const modelId = arkModelId.value.trim() || modelCfg.model;
+
+    const filenames = frames.map(f => f.uploadName).filter(Boolean);
+    const ratio = frames.length ? frames[0].ratioLabel : "1:1";
+
+    const submitResp = await fetch(`${API_BASE}/api/generate-ark`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, api_key: apiKey, model_id: modelId, filenames, ratio, duration: 5 }),
+    });
+    const submitData = await submitResp.json();
+
+    if (!submitData.success) {
+      progressText.textContent = "提交失败";
+      videoResult.innerHTML = `<div class="placeholder">❌ 提交失败<br>${escHtml(submitData.error || "")}</div>`;
+      return;
+    }
+
+    progressFill.style.width = "30%";
+    progressText.textContent = `任务已提交（${submitData.model}），正在生成视频…`;
+
+    await pollArk(submitData.task_id, apiKey);
+  }
+
+  // 轮询火山方舟任务
+  async function pollArk(taskId, apiKey) {
+    const maxAttempts = 150;
+    for (let i = 0; i < maxAttempts; i++) {
+      await sleep(5000);
+      const resp = await fetch(`${API_BASE}/api/poll-ark/${taskId}?api_key=${encodeURIComponent(apiKey)}`);
+      const data = await resp.json();
+
+      if (!data.success) {
+        progressFill.style.width = "100%";
+        progressText.textContent = "生成失败";
+        videoResult.innerHTML = `<div class="placeholder">❌ 生成失败<br>${escHtml(data.error || "未知错误")}</div>`;
+        return;
+      }
+
+      if (data.status === "succeeded") {
+        progressFill.style.width = "100%";
+        progressText.textContent = "视频生成完成！";
+        await showVideoPlayer(data.video_url, "火山方舟");
+        return;
+      }
+
+      const pct = Math.min(90, 30 + i * 2);
+      progressFill.style.width = pct + "%";
+      progressText.textContent = `视频生成中…（${data.task_status || "queued"}）已等待 ${(i + 1) * 5} 秒`;
+    }
+
+    progressText.textContent = "轮询超时";
+    videoResult.innerHTML = `<div class="placeholder">⏱️ 轮询超时，视频可能仍在生成，请稍后在火山方舟控制台查看</div>`;
+  }
+
+  // 即梦 Jimeng Seedance 2.0 fast VIP 生成（火山方舟平台）
+  async function generateJimeng(prompt, modelCfg) {
+    const apiKey = jimengApiKey.value.trim();
+    if (!apiKey) {
+      progressText.textContent = "请先填入即梦 API Key";
+      videoResult.innerHTML = `<div class="placeholder">⚠️ 请先在上方填入即梦 API Key</div>`;
+      return;
+    }
+    const modelId = jimengModelId.value.trim() || modelCfg.model;
+
+    const filenames = frames.map(f => f.uploadName).filter(Boolean);
+    const ratio = frames.length ? frames[0].ratioLabel : "1:1";
+
+    const submitResp = await fetch(`${API_BASE}/api/generate-jimeng`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, api_key: apiKey, model_id: modelId, filenames, ratio, duration: 5 }),
+    });
+    const submitData = await submitResp.json();
+
+    if (!submitData.success) {
+      progressText.textContent = "提交失败";
+      videoResult.innerHTML = `<div class="placeholder">❌ 提交失败<br>${escHtml(submitData.error || "")}</div>`;
+      return;
+    }
+
+    progressFill.style.width = "30%";
+    progressText.textContent = `任务已提交（${submitData.model}），正在生成视频…`;
+
+    await pollJimeng(submitData.task_id, apiKey);
+  }
+
+  // 轮询即梦 Jimeng 任务（火山方舟平台）
+  async function pollJimeng(taskId, apiKey) {
+    const maxAttempts = 150;
+    for (let i = 0; i < maxAttempts; i++) {
+      await sleep(5000);
+      const resp = await fetch(`${API_BASE}/api/poll-jimeng/${taskId}?api_key=${encodeURIComponent(apiKey)}`);
+      const data = await resp.json();
+
+      if (!data.success) {
+        progressFill.style.width = "100%";
+        progressText.textContent = "生成失败";
+        videoResult.innerHTML = `<div class="placeholder">❌ 生成失败<br>${escHtml(data.error || "未知错误")}</div>`;
+        return;
+      }
+
+      if (data.status === "succeeded") {
+        progressFill.style.width = "100%";
+        progressText.textContent = "视频生成完成！";
+        await showVideoPlayer(data.video_url, "即梦 Jimeng");
+        return;
+      }
+
+      const pct = Math.min(90, 30 + i * 2);
+      progressFill.style.width = pct + "%";
+      progressText.textContent = `视频生成中…（${data.task_status || "queued"}）已等待 ${(i + 1) * 5} 秒`;
+    }
+
+    progressText.textContent = "轮询超时";
+    videoResult.innerHTML = `<div class="placeholder">⏱️ 轮询超时，视频可能仍在生成，请稍后在火山方舟控制台查看</div>`;
+  }
+
+  // ===== 步骤高亮 =====
+  function updateStepper() {
+    const c1 = $("#chip1"), c2 = $("#chip2"), c3 = $("#chip3");
+    [c1,c2,c3].forEach(c => c.classList.remove("active","done"));
+
+    // Step 1: 上传关键帧
+    if (frames.length) { c1.classList.add("done"); c2.classList.add("active"); }
+    else { c1.classList.add("active"); }
+
+    // Step 2: 选择动作 & 提示词
+    if (frames.length && selectedAction) { c2.classList.add("done"); c3.classList.add("active"); }
+
+    // Step 3: 生成视频（生成时点亮，默认不亮）
+  }
+
+  // ===== 初始化 =====
+  renderActions();
+  renderModels();
+  renderFrames();
+  runAllChecks();
+  updateStepper();
+})();
+</script>
+</body>
+</html>

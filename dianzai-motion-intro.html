@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>点仔动效生成工具 — 让每个人都能做出规范的点仔动画</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bg-card: #141414;
+    --bg-card-hover: #1a1a1a;
+    --border: #262626;
+    --border-light: #3a3a3a;
+    --text: #ffffff;
+    --text-secondary: #a3a3a3;
+    --text-muted: #737373;
+    --accent: #22c55e;
+    --accent-light: #4ade80;
+    --accent-glow: rgba(34, 197, 94, 0.15);
+    --gradient-start: #22c55e;
+    --gradient-end: #16a34a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { text-decoration: none; color: inherit; }
+
+  /* Navigation */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    background: rgba(10,10,10,0.8);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 18px;
+  }
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta {
+    padding: 8px 20px;
+    background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+  }
+
+  /* Hero */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: 120px 48px 80px;
+    gap: 64px;
+    position: relative;
+    overflow: hidden;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .hero-left {
+    flex: 1;
+    max-width: 540px;
+    text-align: left;
+    position: relative;
+    z-index: 1;
+  }
+  .hero-right {
+    flex: 1;
+    max-width: 480px;
+    min-height: 420px;
+    position: relative;
+    z-index: 1;
+    perspective: 1000px;
+    width: 100%;
+  }
+  .hero-right .video-card {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+  }
+  .hero-right .video-card[data-pos="0"] {
+    transform: translateY(0) scale(1);
+    z-index: 4;
+    opacity: 1;
+    border-color: var(--border-light);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  .hero-right .video-card[data-pos="1"] {
+    transform: translateY(16px) scale(0.92);
+    z-index: 3;
+    opacity: 0.7;
+  }
+  .hero-right .video-card[data-pos="2"] {
+    transform: translateY(32px) scale(0.84);
+    z-index: 2;
+    opacity: 0.45;
+  }
+  .hero-right .video-card[data-pos="3"] {
+    transform: translateY(48px) scale(0.76);
+    z-index: 1;
+    opacity: 0.2;
+  }
+  .hero-right video {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+    flex: 1;
+    aspect-ratio: 1/1;
+    background: #000000;
+  }
+  .hero-right .video-shrink {
+    transform: scale(0.88);
+  }
+  .hero-right .video-fallback {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.8;
+  }
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .hero-bg::before {
+    content: '';
+    position: absolute;
+    top: 10%; right: 5%;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(34,197,94,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: float 8s ease-in-out infinite;
+  }
+  .hero-bg::after {
+    content: '';
+    position: absolute;
+    bottom: 20%; left: 10%;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(34,197,94,0.08) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: float 10s ease-in-out infinite reverse;
+  }
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(20px, -20px); }
+  }
+  .hero-content {
+    max-width: 1000px;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(34,197,94,0.1);
+    border: 1px solid rgba(34,197,94,0.2);
+    border-radius: 50px;
+    font-size: 14px;
+    color: var(--accent-light);
+    margin-bottom: 32px;
+  }
+  .hero h1 {
+    font-size: 36px;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -1px;
+    margin-bottom: 24px;
+  }
+  .hero h1 .gradient {
+    background: linear-gradient(135deg, var(--accent-light), #86efac);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-desc {
+    font-size: 20px;
+    color: var(--text-secondary);
+    max-width: 480px;
+    margin: 0 0 40px 0;
+    line-height: 1.7;
+  }
+  .hero-btns {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+    color: white;
+    box-shadow: 0 4px 20px rgba(34,197,94,0.3);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 30px rgba(34,197,94,0.4);
+  }
+  .btn-secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover {
+    border-color: var(--accent);
+    background: rgba(34,197,94,0.05);
+  }
+  .hero-showcase {
+    margin-top: 60px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+  }
+  .hero-showcase .placeholder {
+    aspect-ratio: 16/9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    background: linear-gradient(180deg, #141414, #0a0a0a);
+  }
+  .placeholder-icon { font-size: 64px; opacity: 0.3; }
+  .placeholder-text { color: var(--text-muted); font-size: 16px; }
+  .hero-showcase-bar {
+    display: flex;
+    gap: 6px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-red { background: #ef4444; }
+  .dot-yellow { background: #eab308; }
+  .dot-green { background: #22c55e; }
+
+  /* Section styles */
+  section { padding: 100px 24px; max-width: 1200px; margin: 0 auto; }
+  .section-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent-light);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-label::before {
+    content: '';
+    width: 24px;
+    height: 1px;
+    background: var(--accent);
+  }
+  .section-title {
+    font-size: 40px;
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 16px;
+  }
+  .section-desc {
+    font-size: 18px;
+    color: var(--text-secondary);
+    max-width: 600px;
+    margin-bottom: 60px;
+  }
+
+  /* Pain points */
+  .pain-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+  .pain-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px 32px;
+    transition: all 0.3s ease;
+  }
+  .pain-card:hover {
+    border-color: var(--accent);
+    background: var(--bg-card-hover);
+    transform: translateY(-4px);
+  }
+  .pain-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin-bottom: 20px;
+    background: rgba(239,68,68,0.1);
+  }
+  .pain-card h3 { font-size: 20px; font-weight: 700; margin-bottom: 12px; }
+  .pain-card p { color: var(--text-secondary); font-size: 15px; line-height: 1.7; }
+
+  /* Benefits */
+  .benefits { background: linear-gradient(180deg, #0a0a0a, #0f0f0f); }
+  .benefit-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+  .benefit-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px 24px;
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+  .benefit-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-4px);
+  }
+  .benefit-icon {
+    font-size: 40px;
+    margin-bottom: 16px;
+  }
+  .benefit-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  .benefit-card p { color: var(--text-secondary); font-size: 14px; }
+  .benefit-num {
+    font-size: 36px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent-light), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+
+  /* Steps */
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 20px;
+  }
+  .step-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 24px;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+  .step-card:hover { border-color: var(--accent); }
+  .step-card::after {
+    content: '';
+    position: absolute;
+    top: 40px; right: -20px;
+    width: 20px; height: 1px;
+    background: var(--border);
+  }
+  .step-card:last-child::after { display: none; }
+  .step-num {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+  .step-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .step-card p { color: var(--text-secondary); font-size: 13px; line-height: 1.6; }
+
+  /* Features */
+  .features { background: linear-gradient(180deg, #0f0f0f, #0a0a0a); }
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+  .feature-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  .feature-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-4px);
+  }
+  .feature-img {
+    height: 220px;
+    background: linear-gradient(135deg, #0f1f14, #1a1a1a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    border-bottom: 1px solid var(--border);
+  }
+  .feature-body { padding: 28px; }
+  .feature-body h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .feature-body p { color: var(--text-secondary); font-size: 15px; line-height: 1.6; }
+  .feature-tags {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    padding: 4px 12px;
+    background: rgba(34,197,94,0.1);
+    border: 1px solid rgba(34,197,94,0.2);
+    border-radius: 50px;
+    font-size: 12px;
+    color: var(--accent-light);
+    font-weight: 600;
+  }
+
+  /* Presets */
+  .preset-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+  }
+  .preset-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+  .preset-card:hover {
+    border-color: var(--accent);
+    background: var(--bg-card-hover);
+    transform: translateY(-4px);
+  }
+  .preset-icon { font-size: 40px; margin-bottom: 12px; }
+  .preset-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .preset-card p { color: var(--text-secondary); font-size: 13px; }
+
+  /* Video Showcase */
+.video-showcase {
+  background: linear-gradient(180deg, #0a0a0a, #0f0f0f);
+}
+.video-group {
+  margin-bottom: 48px;
+}
+.video-group:last-child {
+  margin-bottom: 0;
+}
+.video-group-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.video-group-title::before {
+  content: '';
+  width: 4px;
+  height: 20px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.video-grid.single {
+  grid-template-columns: 1fr;
+  max-width: 600px;
+}
+.video-card-placeholder {
+  background: var(--bg-card);
+  border: 2px dashed var(--border);
+  border-radius: 16px;
+  aspect-ratio: 16 / 9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-secondary);
+  transition: all 0.3s ease;
+}
+.video-card-placeholder:hover {
+  border-color: var(--accent);
+  background: var(--bg-card-hover);
+}
+.video-card-placeholder .icon {
+  font-size: 40px;
+  opacity: 0.6;
+}
+.video-card-placeholder .label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Models */
+  .models { background: linear-gradient(180deg, #0a0a0a, #0f0f0f); }
+  .model-table-wrap {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .model-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .model-table th, .model-table td {
+    padding: 16px 24px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .model-table th {
+    background: rgba(255,255,255,0.02);
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .model-table td { font-size: 15px; }
+  .model-table tr:last-child td { border-bottom: none; }
+  .model-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .model-tag {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 50px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .tag-meijing { background: rgba(34,197,94,0.1); color: var(--accent-light); border: 1px solid rgba(34,197,94,0.2); }
+  .tag-aliyun { background: rgba(59,130,246,0.1); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2); }
+  .tag-kling { background: rgba(249,115,22,0.1); color: #fb923c; border: 1px solid rgba(249,115,22,0.2); }
+  .tag-ark { background: rgba(168,85,247,0.1); color: #c084fc; border: 1px solid rgba(168,85,247,0.2); }
+
+  /* Specs */
+  .specs-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+  .spec-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    transition: all 0.3s ease;
+  }
+  .spec-card:hover { border-color: var(--accent); }
+  .spec-card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .spec-card ul {
+    list-style: none;
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 2;
+  }
+  .spec-card li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .spec-card li::before {
+    content: '›';
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* Roadmap */
+  .roadmap-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  .roadmap-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    transition: all 0.3s ease;
+  }
+  .roadmap-card:hover {
+    border-color: var(--accent);
+    background: var(--bg-card-hover);
+  }
+  .roadmap-num {
+    min-width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .roadmap-card h4 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .roadmap-card p { color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
+
+  /* CTA Section */
+  .cta-section {
+    padding: 100px 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .cta-section::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(34,197,94,0.1) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+.cta-content {
+  max-width: 600px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+.cta-content .hero-btns {
+  justify-content: center;
+}
+.cta-content .btn {
+  padding: 21px 42px;
+  font-size: 24px;
+  border-radius: 15px;
+}
+.cta-section h2 {
+    font-size: 40px;
+    font-weight: 800;
+    margin-bottom: 16px;
+  }
+  .cta-section p {
+    color: var(--text-secondary);
+    font-size: 18px;
+    margin-bottom: 32px;
+  }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 40px 24px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+  .footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .footer-links a {
+    color: var(--text-secondary);
+    transition: color 0.3s;
+  }
+  .footer-links a:hover { color: var(--text); }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .pain-grid, .benefit-grid, .steps-grid, .preset-grid, .specs-grid, .roadmap-grid, .video-grid { grid-template-columns: repeat(2, 1fr); }
+    .feature-grid { grid-template-columns: 1fr; }
+    .hero { flex-direction: column; padding: 100px 24px 60px; gap: 40px; }
+    .hero-left { text-align: center; max-width: 100%; }
+    .hero-right { max-width: 100%; min-height: 360px; }
+    .hero-desc { margin: 0 auto 40px; }
+    .hero-btns { justify-content: center; }
+  }
+  @media (max-width: 768px) {
+    .nav-links { display: none; }
+    .hero h1 { font-size: 28px; }
+    .section-title { font-size: 28px; }
+    .pain-grid, .benefit-grid, .steps-grid, .preset-grid, .specs-grid, .roadmap-grid, .video-grid { grid-template-columns: 1fr; }
+    .step-card::after { display: none; }
+    .hero { padding: 100px 20px 40px; }
+    .hero-right { min-height: 320px; }
+    .hero-right .video-card:nth-child(3) { grid-column: auto; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav>
+  <div class="nav-inner">
+    <div class="logo">
+      <div class="logo-icon">🎬</div>
+      <span>点仔动效生成工具</span>
+    </div>
+    <div class="nav-links">
+      <a href="#problem">痛点</a>
+      <a href="#features">功能</a>
+      <a href="#steps">流程</a>
+      <a href="#models">模型</a>
+      <a href="#roadmap">迭代</a>
+    </div>
+    <a href="/" class="nav-cta">立即使用</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<header class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-left">
+    <div class="hero-badge">
+      <span>🎬</span> 大众点评品牌营销设计团队 · V1.0
+    </div>
+    <h1>
+      不懂动效？<br>
+      也能做出<span class="gradient">规范的点仔动画</span>
+    </h1>
+    <p class="hero-desc">
+      内置点仔 IP 动效规范，一键选择动作预设，自动生成提示词，
+      支持多个顶级 AI 模型，大幅降低动效制作门槛。
+    </p>
+    <div class="hero-btns">
+      <a href="/" class="btn btn-primary">
+        🚀 立即使用 <span>→</span>
+      </a>
+    </div>
+  </div>
+<div class="hero-right" id="heroCarousel">
+<div class="video-card" data-pos="0">
+<video src="/static/videos/checkin-1.mp4" autoplay muted loop playsinline onloadeddata="this.nextElementSibling.style.display='none'"></video>
+<div class="video-fallback">🎬 点仔打卡动画</div>
+</div>
+<div class="video-card" data-pos="1">
+<video class="video-shrink" src="/static/videos/export.mp4" autoplay muted loop playsinline onloadeddata="this.nextElementSibling.style.display='none'"></video>
+<div class="video-fallback">🎬 点仔导出效果</div>
+</div>
+<div class="video-card" data-pos="2">
+<video src="/static/videos/checkin-2.mp4" autoplay muted loop playsinline onloadeddata="this.nextElementSibling.style.display='none'"></video>
+<div class="video-fallback">🎬 点仔打卡动画</div>
+</div>
+<div class="video-card" data-pos="3">
+<video src="/static/videos/celebrate.mp4" autoplay muted loop playsinline onloadeddata="this.nextElementSibling.style.display='none'"></video>
+<div class="video-fallback">🎬 欢呼庆祝</div>
+</div>
+</div>
+</header>
+
+<!-- Problem -->
+<section id="problem">
+  <div class="section-label">Problem</div>
+  <h2 class="section-title">制作点仔动效，遇到什么问题？</h2>
+  <p class="section-desc">点仔动效在品牌营销活动中被高频使用，但制作过程中存在诸多痛点</p>
+  <div class="pain-grid">
+    <div class="pain-card">
+      <div class="pain-icon">🎭</div>
+      <h3>动效能力不足</h3>
+      <p>组内多数同学缺乏动效专业背景，需要自行寻找合适的 AI 工具与模型，凭经验撰写提示词，试错成本较高。</p>
+    </div>
+    <div class="pain-card">
+      <div class="pain-icon">📐</div>
+      <h3>IP 动效规范缺失</h3>
+      <p>生成过程缺少统一的输入标准与质量规范，产出常出现比例失调、背面特征错误等不符合 IP 形象的情况。</p>
+    </div>
+    <div class="pain-card">
+      <div class="pain-icon">💾</div>
+      <h3>经验难沉淀</h3>
+      <p>成功案例的配置与方法分散在个人手中，新人无法直接复用，团队能力难以规模化。</p>
+    </div>
+  </div>
+</section>
+
+<!-- Benefits -->
+<section class="benefits">
+  <div class="section-label">Benefits</div>
+  <h2 class="section-title">使用这个工具，你能获得什么？</h2>
+  <p class="section-desc">从效率、门槛、经验、产能四个维度全面提升团队动效能力</p>
+  <div class="benefit-grid">
+    <div class="benefit-card">
+      <div class="benefit-num">⚡</div>
+      <h3>效率提升</h3>
+      <p>大幅缩短做动效的时间，从反复抽卡到一次到位</p>
+    </div>
+    <div class="benefit-card">
+      <div class="benefit-num">🚪</div>
+      <h3>门槛降低</h3>
+      <p>不需要懂 AE / 动效，会选动作就能做出规范动画</p>
+    </div>
+    <div class="benefit-card">
+      <div class="benefit-num">📚</div>
+      <h3>经验沉淀</h3>
+      <p>成功配置自动入库，新人可以直接复用最佳实践</p>
+    </div>
+    <div class="benefit-card">
+      <div class="benefit-num">🚀</div>
+      <h3>释放产能</h3>
+      <p>专业同学从重复劳动中解放，做更高阶创意</p>
+    </div>
+  </div>
+</section>
+
+<!-- Steps -->
+<section id="steps">
+  <div class="section-label">Workflow</div>
+  <h2 class="section-title">简单五步，生成规范动效</h2>
+  <p class="section-desc">无需专业知识，按步骤操作即可生成符合点仔规范的动画</p>
+  <div class="steps-grid">
+    <div class="step-card">
+      <div class="step-num">1</div>
+      <h3>上传关键帧</h3>
+      <p>准备好符合规范的点仔图片素材，点击上传即可</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">2</div>
+      <h3>选择动作预设</h3>
+      <p>从走路、打招呼、呼吸感等预设动作中选择</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">3</div>
+      <h3>自动生成提示词</h3>
+      <p>系统根据选择自动生成完整提示词，包含风格约束</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">4</div>
+      <h3>选择生成模型</h3>
+      <p>根据需求选择合适的 AI 模型（Seedance、Kling 等）</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">5</div>
+      <h3>生成并下载</h3>
+      <p>点击生成按钮，等待完成后即可下载视频</p>
+    </div>
+  </div>
+</section>
+
+<!-- Specs -->
+<section>
+  <div class="section-label">Specs</div>
+  <h2 class="section-title">关键帧规范</h2>
+  <p class="section-desc">关键帧质量直接决定最终效果，请严格按照规范准备</p>
+  <div class="specs-grid">
+    <div class="spec-card">
+      <h3>📁 格式与尺寸</h3>
+      <ul>
+        <li>PNG / JPG 格式</li>
+        <li>比例 1:1 / 16:9 / 9:16 / 4:3 / 3:4</li>
+        <li>短边不低于 1024px</li>
+        <li>所有关键帧必须同一比例、同一尺寸</li>
+      </ul>
+    </div>
+    <div class="spec-card">
+      <h3>🎨 背景要求</h3>
+      <ul>
+        <li>推荐纯绿色 #00FF00</li>
+        <li>备选纯蓝色 #0000FF</li>
+        <li>或纯黑色 #000000</li>
+        <li>禁止复杂场景、渐变、透明背景</li>
+      </ul>
+    </div>
+    <div class="spec-card">
+      <h3>🐼 IP 画面</h3>
+      <ul>
+        <li>头、四肢、尾巴、脚全部在画面内</li>
+        <li>距离边缘至少留白 10%</li>
+        <li>无移动时约占画面 40%</li>
+        <li>服饰一致，表情建议用库内基础表情</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Presets -->
+<section>
+  <div class="section-label">Presets</div>
+  <h2 class="section-title">内置动作预设</h2>
+  <p class="section-desc">覆盖最常用的点仔动效场景，持续扩展中</p>
+  <div class="preset-grid">
+    <div class="preset-card">
+      <div class="preset-icon">🚶</div>
+      <h3>走路</h3>
+      <p>小熊猫向前走路<br>2-3 帧</p>
+    </div>
+    <div class="preset-card">
+      <div class="preset-icon">🔄</div>
+      <h3>转身走路</h3>
+      <p>自然转身向后走<br>2-3 帧</p>
+    </div>
+    <div class="preset-card">
+      <div class="preset-icon">👋</div>
+      <h3>打招呼</h3>
+      <p>轻微挥手打招呼<br>1-2 帧</p>
+    </div>
+    <div class="preset-card">
+      <div class="preset-icon">🌬️</div>
+      <h3>呼吸感微动效</h3>
+      <p>站立状态轻微呼吸起伏<br>1 帧</p>
+    </div>
+    <div class="preset-card">
+      <div class="preset-icon">✏️</div>
+      <h3>自定义动作</h3>
+      <p>自行描述动作<br>自定义帧数</p>
+    </div>
+  </div>
+</section>
+
+<!-- Video Showcase -->
+<section class="video-showcase">
+  <div class="section-label">Showcase</div>
+  <h2 class="section-title">效果展示</h2>
+  <p class="section-desc">AI 生成的点仔动效与实际演示效果</p>
+
+  <div class="video-group">
+    <div class="video-group-title">AI 生成的点仔动效</div>
+    <div class="video-grid">
+      <div class="video-card" style="background:#000; border-radius:16px; overflow:hidden; aspect-ratio:1/1; border:1px solid #333;">
+        <video src="/static/videos/cheer.mp4" autoplay muted loop playsinline style="width:100%; height:100%; object-fit:cover; display:block;"></video>
+      </div>
+      <div class="video-card" style="background:#000; border-radius:16px; overflow:hidden; aspect-ratio:1/1; border:1px solid #333;">
+        <video src="/static/videos/photo.mp4" autoplay muted loop playsinline style="width:100%; height:100%; object-fit:cover; display:block;"></video>
+      </div>
+      <div class="video-card" style="background:#000; border-radius:16px; overflow:hidden; aspect-ratio:1/1; border:1px solid #333;">
+        <video src="/static/videos/walk.mp4" autoplay muted loop playsinline style="width:100%; height:100%; object-fit:cover; display:block;"></video>
+      </div>
+    </div>
+  </div>
+
+  <div class="video-group">
+    <div class="video-group-title">实际演示效果</div>
+    <div class="video-grid single">
+      <div class="video-card-placeholder">
+        <div class="icon">🎥</div>
+        <div class="label">演示视频（占位）</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Roadmap -->
+<section id="roadmap">
+  <div class="section-label">Roadmap</div>
+  <h2 class="section-title">后续迭代方向</h2>
+  <p class="section-desc">工具持续进化中，以下是规划中的能力升级</p>
+  <div class="roadmap-grid">
+    <div class="roadmap-card">
+      <div class="roadmap-num">1</div>
+      <div>
+        <h4>AI 改图能力</h4>
+        <p>上传的关键帧不符合要求时，直接使用美境修改成符合规范的素材</p>
+      </div>
+    </div>
+    <div class="roadmap-card">
+      <div class="roadmap-num">2</div>
+      <div>
+        <h4>智能模型推荐</h4>
+        <p>根据动作类型和关键帧特点，自动推荐最适合的生成模型</p>
+      </div>
+    </div>
+    <div class="roadmap-card">
+      <div class="roadmap-num">3</div>
+      <div>
+        <h4>自动抠图</h4>
+        <p>生成完成后，合格的视频自动抠图处理，直接可用</p>
+      </div>
+    </div>
+    <div class="roadmap-card">
+      <div class="roadmap-num">4</div>
+      <div>
+        <h4>AI 质检工具</h4>
+        <p>生成完成后自动质检，与输入关键帧对比，检测变形并输出打分</p>
+      </div>
+    </div>
+    <div class="roadmap-card">
+      <div class="roadmap-num">5</div>
+      <div>
+        <h4>3D 动态白膜</h4>
+        <p>常用动作做成 3D 动态白膜，AI 可直接学习换肤</p>
+      </div>
+    </div>
+    <div class="roadmap-card">
+      <div class="roadmap-num">6</div>
+      <div>
+        <h4>IP 表情变化动效</h4>
+        <p>支持点仔表情变化的动效生成（技术难点，持续攻克中）</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-content">
+    <h2>开始生成你的第一个点仔动画</h2>
+    <p>无需动效经验，只需几步操作，就能产出符合规范的品牌级 IP 动画</p>
+    <div class="hero-btns">
+      <a href="/" class="btn btn-primary">
+        🚀 立即使用 <span>→</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-links">
+    <a href="https://km.sankuai.com/collabpage/2781140856" target="_blank">📖 使用指南</a>
+    <a href="#">💬 问题反馈</a>
+    <a href="/">🏠 工具首页</a>
+  </div>
+  <div>大众点评品牌营销设计团队 · 点仔动效生成工具 · 持续迭代中</div>
+</footer>
+
+<script>
+(function() {
+  const carousel = document.getElementById('heroCarousel');
+  if (!carousel) return;
+  const cards = Array.from(carousel.querySelectorAll('.video-card'));
+  let current = 0;
+
+  function rotate() {
+    current = (current + 1) % cards.length;
+    cards.forEach((card, i) => {
+      const pos = (i - current + cards.length) % cards.length;
+      card.setAttribute('data-pos', pos);
+    });
+  }
+
+  setInterval(rotate, 3000);
+})();
+</script>
+
+</body>
+</html>
