@@ -397,6 +397,17 @@
 
     <div class="model-select" id="modelSelect"></div>
 
+    <!-- LibTV 状态提示 -->
+    <div id="libtvStatusBar" hidden style="margin-top:16px;">
+      <div id="libtvStatusOk" hidden style="font-size:13px;color:#17A34A;background:rgba(0,200,83,0.08);padding:12px 16px;border-radius:10px;border:1px solid rgba(0,200,83,0.15);">
+        ✅ LibTV 已就绪 (<span id="libtvNickname"></span>)
+      </div>
+      <div id="libtvStatusErr" hidden style="font-size:13px;color:#D0312D;background:rgba(255,74,71,0.06);padding:12px 16px;border-radius:10px;line-height:1.6;border:1px solid rgba(255,74,71,0.15);">
+        ❌ LibTV 未就绪：<span id="libtvErrMsg"></span><br>
+        请在 Railway Shell 中执行 <code style="background:#1a1a1a;padding:3px 8px;border-radius:4px;font-size:12px;border:1px solid var(--line);">curl -fsSL https://liblibai-web-static.liblib.cloud/cli/latest/install-libtv-cli.sh | bash && export PATH="$HOME/.libtv:$PATH" && libtv login phone -p 你的手机号</code>
+      </div>
+    </div>
+
     <!-- 美境登录状态提示 -->
     <div id="meigenStatusBar" hidden style="margin-top:16px;">
       <div id="meigenStatusOk" hidden style="font-size:13px;color:#17A34A;background:rgba(0,200,83,0.08);padding:12px 16px;border-radius:10px;border:1px solid rgba(0,200,83,0.15);">
@@ -464,7 +475,7 @@
     </div>
 
     <div class="note">
-      <strong>接入说明：</strong>已接入六套视频生成能力——<strong>美境 Seedance 2.0 / mini</strong>（关键帧自动上传美境 S3，首次使用 meigen-cli 需在大象确认授权）、<strong>即梦 Seedance 2.0 fast VIP</strong>（火山引擎视觉平台，需填入 AccessKey + SecretKey）、<strong>阿里云百炼 Happy Horse 1.1</strong>（填入百炼 API Key）、<strong>可灵 Kling 3.0</strong>（填入 AccessKey + SecretKey，多帧自动走首尾帧）、<strong>即梦 Seedance 2.5</strong>（填入火山方舟 API Key）。视频生成耗时约 5-20 分钟。
+      <strong>接入说明：</strong>已接入七套视频生成能力——<strong>LibTV</strong>（LiblibAI 一站式 AI 视频创作平台，已接入 Seedance 2.5 / 可灵 3.0 / Wan 2.7 等）、<strong>美境 Seedance 2.0 / mini</strong>（关键帧自动上传美境 S3，首次使用 meigen-cli 需在大象确认授权）、<strong>即梦 Seedance 2.0 fast VIP</strong>（火山引擎视觉平台，需填入 AccessKey + SecretKey）、<strong>阿里云百炼 Happy Horse 1.1</strong>（填入百炼 API Key）、<strong>可灵 Kling 3.0</strong>（填入 AccessKey + SecretKey，多帧自动走首尾帧）、<strong>即梦 Seedance 2.5</strong>（填入火山方舟 API Key）。视频生成耗时约 5-20 分钟。
     </div>
   </div>
 
@@ -510,6 +521,7 @@
   ];
 
   const MODELS = [
+    { id: "libtv", name: "LibTV", desc: "LiblibAI · 一站式 AI 视频创作平台，已接入 Seedance 2.5 / 可灵 3.0 / Wan 2.7 等", model: "Seedance 2.5", type: "libtv" },
     { id: "seedance20", name: "Seedance 2.0", desc: "美境 · 效果最佳，时长约 10-20 分钟", model: "doubao-seedance-2.0", type: "meigen" },
     { id: "seedance20mini", name: "Seedance 2.0 mini", desc: "美境 · 速度快，适合快速预览", model: "doubao-seedance-2.0-mini", type: "meigen" },
     { id: "seedance20fastvip", name: "即梦 Seedance 2.0 fast VIP", desc: "即梦 · 极速 VIP 通道，生成更快", model: "Doubao-Seedance-2.0-fast", type: "jimeng" },
@@ -521,7 +533,7 @@
   // ===== 状态 =====
   let frames = [];      // { id, file, img, url, remoteUrl, width, height, ratioLabel, check, uploading }
   let selectedAction = "walk";
-  let selectedModel = "seedance20";
+  let selectedModel = "libtv";
   let frameSeq = 0;
   const API_BASE = ""; // 同域，空字符串即可
 
@@ -557,6 +569,9 @@ const jimengModelId = $("#jimengModelId");
 const meigenStatusBar = $("#meigenStatusBar");
 const meigenStatusOk = $("#meigenStatusOk");
 const meigenStatusErr = $("#meigenStatusErr");
+const libtvStatusBar = $("#libtvStatusBar");
+const libtvStatusOk = $("#libtvStatusOk");
+const libtvStatusErr = $("#libtvStatusErr");
 
   // ===== 工具 =====
   function ratioKey(w, h) {
@@ -711,6 +726,34 @@ const meigenStatusErr = $("#meigenStatusErr");
     }
   }
 
+  // LibTV 状态检测
+  async function checkLibtvStatus() {
+    try {
+      const resp = await fetch(`${API_BASE}/api/libtv-status`);
+      const data = await resp.json();
+      const isLibtvModel = selectedModel === "libtv";
+      if (!isLibtvModel) {
+        libtvStatusBar.hidden = true;
+        return;
+      }
+      libtvStatusBar.hidden = false;
+      if (data.logged_in) {
+        libtvStatusOk.hidden = false;
+        libtvStatusErr.hidden = true;
+        document.getElementById("libtvNickname").textContent = data.nickname || "";
+      } else {
+        libtvStatusOk.hidden = true;
+        libtvStatusErr.hidden = false;
+        document.getElementById("libtvErrMsg").textContent = data.error || "未知错误";
+      }
+    } catch (e) {
+      libtvStatusBar.hidden = false;
+      libtvStatusOk.hidden = true;
+      libtvStatusErr.hidden = false;
+      document.getElementById("libtvErrMsg").textContent = "无法连接到后端";
+    }
+  }
+
   function renderModels() {
     modelSelect.innerHTML = "";
     MODELS.forEach(m => {
@@ -733,6 +776,8 @@ const meigenStatusErr = $("#meigenStatusErr");
     jimengKeyWrap.hidden = type !== "jimeng";
     // 检测美境登录状态
     checkMeigenStatus();
+    // 检测 LibTV 状态
+    checkLibtvStatus();
   }
 
   function renderFrames() {
@@ -978,6 +1023,33 @@ const meigenStatusErr = $("#meigenStatusErr");
   // ===== 生成视频（真实调用后端） =====
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+  // LibTV 生成
+  async function generateLibtv(prompt, modelCfg) {
+    const filenames = frames.map(f => f.uploadName).filter(Boolean);
+    const ratio = frames.length ? frames[0].ratioLabel : "1:1";
+
+    progressFill.style.width = "10%";
+    progressText.textContent = "正在上传关键帧到 LibTV…";
+
+    const submitResp = await fetch(`${API_BASE}/api/generate-libtv`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, filenames, ratio, duration: 5, model: modelCfg.model }),
+    });
+    const submitData = await submitResp.json();
+
+    if (!submitData.success) {
+      progressFill.style.width = "100%";
+      progressText.textContent = "生成失败";
+      videoResult.innerHTML = `<div class="placeholder">❌ 生成失败<br>${escHtml(submitData.error || "")}</div>`;
+      return;
+    }
+
+    progressFill.style.width = "100%";
+    progressText.textContent = "视频生成完成！";
+    await showVideoPlayer(submitData.video_url, "LibTV");
+  }
+
   // 下载视频到本地并展示播放器
   async function showVideoPlayer(videoUrl, providerName) {
     progressText.textContent = "视频生成完成，正在下载到本地…";
@@ -1049,7 +1121,9 @@ const meigenStatusErr = $("#meigenStatusErr");
     progressText.textContent = "正在提交生成任务…";
 
     try {
-      if (modelCfg.type === "dashscope") {
+      if (modelCfg.type === "libtv") {
+        await generateLibtv(prompt, modelCfg);
+      } else if (modelCfg.type === "dashscope") {
         await generateDashscope(prompt, modelCfg);
       } else if (modelCfg.type === "kling") {
         await generateKling(prompt, modelCfg);

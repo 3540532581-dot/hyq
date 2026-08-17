@@ -629,6 +629,141 @@ def ark_poll_task(api_key: str, task_id: str) -> dict:
     return {"success": True, "status": "running", "task_status": ark_status or "queued"}
 
 
+# ─── LibTV 相关 ──────────────────────────────────────────────────
+# LibTV 是 LiblibAI 推出的 AI 视频创作平台，通过 CLI 调用
+# 安装方式: curl -fsSL https://liblibai-web-static.liblib.cloud/cli/latest/install-libtv-cli.sh | bash
+
+LIBTV_CLI_PATH = os.path.expanduser("~/.libtv/libtv")
+LIBTV_CONFIG_DIR = os.path.expanduser("~/.libtv")
+LIBTV_PROJECT_UUID = "2c1fc2023fc44504b4b62987567b0692"  # "点仔动效自动生成"画布
+LIBTV_RATIOS = {"1:1", "16:9", "9:16", "4:3", "3:4", "21:9"}
+
+
+def check_libtv_available() -> dict:
+    """检查 libtv CLI 是否可用、是否已登录"""
+    result = {"available": False, "logged_in": False, "error": None, "nickname": None}
+    if not os.path.isfile(LIBTV_CLI_PATH):
+        result["error"] = "libtv CLI 未安装"
+        return result
+    result["available"] = True
+    # 检查登录状态
+    try:
+        env = os.environ.copy()
+        env["PATH"] = f"{os.path.dirname(LIBTV_CLI_PATH)}:{env.get('PATH', '')}"
+        env["LIBTV_CONFIG_DIR"] = LIBTV_CONFIG_DIR
+        proc = subprocess.run(
+            [LIBTV_CLI_PATH, "account", "info"],
+            capture_output=True, text=True, timeout=15, env=env
+        )
+        if proc.returncode == 0:
+            data = json.loads(proc.stdout)
+            result["logged_in"] = True
+            result["nickname"] = data.get("user", {}).get("nickname", "")
+        else:
+            result["error"] = f"登录状态异常: {proc.stderr[:200]}"
+    except Exception as e:
+        result["error"] = str(e)
+    return result
+
+
+def install_libtv_cli() -> dict:
+    """安装 libtv CLI"""
+    try:
+        # 运行官方安装脚本
+        proc = subprocess.run(
+            ["bash", "-c", "curl -fsSL https://liblibai-web-static.liblib.cloud/cli/latest/install-libtv-cli.sh | bash"],
+            capture_output=True, text=True, timeout=60
+        )
+        if proc.returncode == 0 and os.path.isfile(LIBTV_CLI_PATH):
+            return {"success": True, "message": "libtv CLI 安装成功"}
+        return {"success": False, "error": f"安装失败: {proc.stderr[:300]}"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def libtv_submit_video(prompt: str, local_paths: list[str], ratio: str, duration: int, model: str = "Seedance 2.5") -> dict:
+    """调用 libtv CLI 提交视频生成任务，返回 video_url 或错误"""
+    if not os.path.isfile(LIBTV_CLI_PATH):
+        return {"success": False, "error": "libtv CLI 未安装，请联系管理员"}
+    if not local_paths:
+        return {"success": False, "error": "没有可用的关键帧图片"}
+
+    env = os.environ.copy()
+    env["PATH"] = f"{os.path.dirname(LIBTV_CLI_PATH)}:{env.get('PATH', '')}"
+    env["LIBTV_CONFIG_DIR"] = LIBTV_CONFIG_DIR
+
+    if ratio not in LIBTV_RATIOS:
+        ratio = "1:1"
+
+    try:
+        # 1. 上传所有关键帧到 LibTV
+        frame_names = []
+        for i, path in enumerate(local_paths):
+            if not os.path.exists(path):
+                return {"success": False, "error": f"本地图片不存在: {path}"}
+            frame_name = f"帧{i + 1}"
+            upload_cmd = [
+                LIBTV_CLI_PATH, "upload", frame_name, "-t", "image",
+                "--resource", path, "-p", LIBTV_PROJECT_UUID
+            ]
+            proc = subprocess.run(upload_cmd, capture_output=True, text=True, timeout=60, env=env)
+            if proc.returncode != 0:
+                return {"success": False, "error": f"上传帧{i+1}失败: {proc.stderr[:300]}"}
+            frame_names.append(frame_name)
+
+        # 2. 确定生成模式
+        if len(frame_names) == 1:
+            mode_type = "singleImage2video"
+        elif len(frame_names) == 2:
+            mode_type = "frames2video"
+        else:
+            mode_type = "mixed2video"
+
+        # 3. 创建视频节点
+        node_name = f"dianzai-{int(time.time() * 1000)}"
+        create_cmd = [
+            LIBTV_CLI_PATH, "node", "create", node_name, "-t", "video",
+            "-p", LIBTV_PROJECT_UUID,
+            "-s", f"model={model}",
+            "-s", f"modeType={mode_type}",
+            "-s", f"ratio={ratio}",
+            "-s", f"duration={duration}",
+            "--prompt", prompt
+        ]
+        proc = subprocess.run(create_cmd, capture_output=True, text=True, timeout=30, env=env)
+        if proc.returncode != 0:
+            return {"success": False, "error": f"创建视频节点失败: {proc.stderr[:300]}"}
+
+        # 4. 将图片节点连到视频节点左侧
+        if frame_names:
+            left_args = []
+            for fn in frame_names:
+                left_args.extend(["--left", fn])
+            link_cmd = [LIBTV_CLI_PATH, "node", node_name] + left_args + ["-p", LIBTV_PROJECT_UUID]
+            proc = subprocess.run(link_cmd, capture_output=True, text=True, timeout=30, env=env)
+            if proc.returncode != 0:
+                return {"success": False, "error": f"连边失败: {proc.stderr[:300]}"}
+
+        # 5. 触发生成（同步等待，约 2-5 分钟）
+        run_cmd = [LIBTV_CLI_PATH, "node", node_name, "--run", "-p", LIBTV_PROJECT_UUID]
+        proc = subprocess.run(run_cmd, capture_output=True, text=True, timeout=600, env=env)
+        if proc.returncode != 0:
+            return {"success": False, "error": f"生成失败: {proc.stderr[:300]}"}
+
+        # 6. 解析结果
+        result = json.loads(proc.stdout)
+        video_url = result.get("data", {}).get("url", [None])[0]
+        if not video_url:
+            return {"success": False, "error": "生成完成但未获取到视频 URL"}
+
+        return {"success": True, "video_url": video_url, "model": model, "node_name": node_name}
+
+    except subprocess.TimeoutExpired:
+        return {"success": False, "error": "LibTV 生成超时（超过 10 分钟）"}
+    except Exception as e:
+        return {"success": False, "error": f"LibTV 生成异常: {str(e)}"}
+
+
 # ─── 即梦（Jimeng）fast VIP 相关 ─────────────────────────────────
 # 即梦 fast VIP 走火山方舟平台（和 Seedance 2.5 同一套接口），只需 API Key
 JIMENG_RATIOS = {"1:1", "16:9", "9:16", "4:3", "3:4", "21:9"}
@@ -971,6 +1106,45 @@ def api_download_video():
     })
 
 
+# ─── LibTV API 路由 ──────────────────────────────────────────────
+
+@app.route("/api/libtv-status")
+def api_libtv_status():
+    """查询 libtv CLI 安装和登录状态"""
+    return jsonify(check_libtv_available())
+
+
+@app.route("/api/libtv-install", methods=["POST"])
+def api_libtv_install():
+    """安装 libtv CLI"""
+    if os.path.isfile(LIBTV_CLI_PATH):
+        return jsonify({"success": True, "message": "libtv CLI 已存在"})
+    result = install_libtv_cli()
+    return jsonify(result)
+
+
+@app.route("/api/generate-libtv", methods=["POST"])
+def api_generate_libtv():
+    """LibTV 视频生成。"""
+    data = request.get_json(force=True)
+    prompt = data.get("prompt", "").strip()
+    filenames = data.get("filenames", [])
+    ratio = data.get("ratio", "1:1")
+    duration = int(data.get("duration", 5))
+    model = data.get("model", "Seedance 2.5")
+
+    if not prompt:
+        return jsonify({"success": False, "error": "prompt 不能为空"}), 400
+
+    # 根据文件名找回本地路径
+    local_paths = [UPLOADED_FILES[fn] for fn in filenames if UPLOADED_FILES.get(fn)]
+    if not local_paths:
+        return jsonify({"success": False, "error": "未找到已上传的关键帧，请重新上传后再试"}), 400
+
+    result = libtv_submit_video(prompt, local_paths, ratio, duration, model)
+    return jsonify(result)
+
+
 # ─── 主入口 ──────────────────────────────────────────────────────
 
 if __name__ == "__main__":
@@ -979,6 +1153,7 @@ if __name__ == "__main__":
     print("  访问地址: http://localhost:5000")
     print("=" * 60)
     print()
+    print("已接入 LibTV（LiblibAI 视频创作平台），请在 Railway 上完成安装与登录。")
     print("首次使用 meigen-cli 可能需要在大象中确认授权。")
     print("使用 Happy Horse 1.1 需在页面填入阿里云百炼 API Key。")
     print("使用可灵 Kling 3.0 需填入 AccessKey + SecretKey；即梦 fast VIP 需火山引擎 AccessKey + SecretKey；Seedance 2.5 需火山方舟 API Key。")
