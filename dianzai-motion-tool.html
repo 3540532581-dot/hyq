@@ -408,17 +408,6 @@
       </div>
     </div>
 
-    <!-- 美境登录状态提示 -->
-    <div id="meigenStatusBar" hidden style="margin-top:16px;">
-      <div id="meigenStatusOk" hidden style="font-size:13px;color:#17A34A;background:rgba(0,200,83,0.08);padding:12px 16px;border-radius:10px;border:1px solid rgba(0,200,83,0.15);">
-        ✅ 美境已登录 (<span id="meigenMisId"></span>)
-      </div>
-      <div id="meigenStatusErr" hidden style="font-size:13px;color:#D0312D;background:rgba(255,74,71,0.06);padding:12px 16px;border-radius:10px;line-height:1.6;border:1px solid rgba(255,74,71,0.15);">
-        ❌ 美境未登录，无法使用 Seedance 模型。<br>
-        请在终端运行 <code style="background:#1a1a1a;padding:3px 8px;border-radius:4px;font-size:12px;border:1px solid var(--line);">meigen login</code> 完成登录后刷新页面。
-      </div>
-    </div>
-
     <div id="apiKeyWrap" hidden style="margin-top:20px;">
       <!-- 阿里云百炼 Happy Horse -->
       <div id="dashscopeKeyWrap" hidden>
@@ -475,7 +464,7 @@
     </div>
 
     <div class="note">
-      <strong>接入说明：</strong>已接入七套视频生成能力——<strong>LibTV</strong>（LiblibAI 一站式 AI 视频创作平台，已接入 Seedance 2.5 / 可灵 3.0 / Wan 2.7 等）、<strong>美境 Seedance 2.0 / mini</strong>（关键帧自动上传美境 S3，首次使用 meigen-cli 需在大象确认授权）、<strong>即梦 Seedance 2.0 fast VIP</strong>（火山引擎视觉平台，需填入 AccessKey + SecretKey）、<strong>阿里云百炼 Happy Horse 1.1</strong>（填入百炼 API Key）、<strong>可灵 Kling 3.0</strong>（填入 AccessKey + SecretKey，多帧自动走首尾帧）、<strong>即梦 Seedance 2.5</strong>（填入火山方舟 API Key）。视频生成耗时约 5-20 分钟。
+      <strong>接入说明：</strong>已接入五套视频生成能力——<strong>LibTV</strong>（LiblibAI 一站式 AI 视频创作平台，已接入 Happy Horse 1.1 / Seedance 2.5 / 可灵 3.0 / Wan 2.7 等）、<strong>即梦 Seedance 2.0 fast VIP</strong>（火山引擎视觉平台，需填入 AccessKey + SecretKey）、<strong>阿里云百炼 Happy Horse 1.1</strong>（填入百炼 API Key）、<strong>可灵 Kling 3.0</strong>（填入 AccessKey + SecretKey，多帧自动走首尾帧）、<strong>即梦 Seedance 2.5</strong>（填入火山方舟 API Key）。视频生成耗时约 5-20 分钟。
     </div>
   </div>
 
@@ -522,8 +511,6 @@
 
   const MODELS = [
     { id: "libtv", name: "LibTV", desc: "LiblibAI · 一站式 AI 视频创作平台，已接入 Seedance 2.5 / 可灵 3.0 / Wan 2.7 等", model: "Happy Horse 1.1", type: "libtv" },
-    { id: "seedance20", name: "Seedance 2.0", desc: "美境 · 效果最佳，时长约 10-20 分钟", model: "doubao-seedance-2.0", type: "meigen" },
-    { id: "seedance20mini", name: "Seedance 2.0 mini", desc: "美境 · 速度快，适合快速预览", model: "doubao-seedance-2.0-mini", type: "meigen" },
     { id: "seedance20fastvip", name: "即梦 Seedance 2.0 fast VIP", desc: "即梦 · 极速 VIP 通道，生成更快", model: "Doubao-Seedance-2.0-fast", type: "jimeng" },
     { id: "happyhorse", name: "Happy Horse 1.1（百炼直调）", desc: "阿里云百炼 · 多参考图保持 IP 一致", model: "happyhorse-1.1", type: "dashscope" },
     { id: "kling30", name: "可灵 Kling 3.0", desc: "快手可灵 · 首尾帧控制，需 AK + SK", model: "kling-v3", type: "kling" },
@@ -566,9 +553,6 @@ const arkModelId = $("#arkModelId");
 const jimengKeyWrap = $("#jimengKeyWrap");
 const jimengApiKey = $("#jimengApiKey");
 const jimengModelId = $("#jimengModelId");
-const meigenStatusBar = $("#meigenStatusBar");
-const meigenStatusOk = $("#meigenStatusOk");
-const meigenStatusErr = $("#meigenStatusErr");
 const libtvStatusBar = $("#libtvStatusBar");
 const libtvStatusOk = $("#libtvStatusOk");
 const libtvStatusErr = $("#libtvStatusErr");
@@ -702,30 +686,6 @@ const libtvStatusErr = $("#libtvStatusErr");
     updateStepper();
   }
 
-  // 美境登录状态检测
-  async function checkMeigenStatus() {
-    try {
-      const resp = await fetch(`${API_BASE}/api/meigen-status`);
-      const data = await resp.json();
-      const isMeigenModel = selectedModel === "seedance20" || selectedModel === "seedance20mini";
-      if (!isMeigenModel) {
-        meigenStatusBar.hidden = true;
-        return;
-      }
-      meigenStatusBar.hidden = false;
-      if (data.success && data.logged_in) {
-        meigenStatusOk.hidden = false;
-        meigenStatusErr.hidden = true;
-        document.getElementById("meigenMisId").textContent = data.mis_id || "";
-      } else {
-        meigenStatusOk.hidden = true;
-        meigenStatusErr.hidden = false;
-      }
-    } catch (e) {
-      meigenStatusBar.hidden = true;
-    }
-  }
-
   // LibTV 状态检测
   async function checkLibtvStatus() {
     try {
@@ -774,8 +734,6 @@ const libtvStatusErr = $("#libtvStatusErr");
     klingKeyWrap.hidden = type !== "kling";
     arkKeyWrap.hidden = type !== "ark";
     jimengKeyWrap.hidden = type !== "jimeng";
-    // 检测美境登录状态
-    checkMeigenStatus();
     // 检测 LibTV 状态
     checkLibtvStatus();
   }
@@ -840,7 +798,7 @@ const libtvStatusErr = $("#libtvStatusErr");
       frames.push(frame);
       renderFrames();
 
-      // 异步上传到美境 S3
+      // 异步上传到远程存储
       await uploadFrameToRemote(frame);
     }
     genBtn.disabled = false; // 上传完成后启用生成按钮
@@ -1103,15 +1061,6 @@ const libtvStatusErr = $("#libtvStatusErr");
     }
 
     const modelCfg = MODELS.find(m => m.id === selectedModel);
-    // 美境模型需要 remoteUrl（S3 上传成功），非美境模型只需要本地文件
-    if (modelCfg.type === "meigen") {
-      const noRemoteUrl = frames.filter(f => !f.remoteUrl);
-      if (noRemoteUrl.length > 0) {
-        showToast("美境模型需要 S3 上传成功，请检查 meigen login 状态", "warn");
-        return;
-      }
-    }
-
     const prompt = promptBox.dataset.prompt;
 
     genBtn.disabled = true;
@@ -1131,8 +1080,6 @@ const libtvStatusErr = $("#libtvStatusErr");
         await generateArk(prompt, modelCfg);
       } else if (modelCfg.type === "jimeng") {
         await generateJimeng(prompt, modelCfg);
-      } else {
-        await generateMeigen(prompt, modelCfg);
       }
     } catch (err) {
       progressFill.style.width = "100%";
@@ -1142,46 +1089,6 @@ const libtvStatusErr = $("#libtvStatusErr");
       genBtn.disabled = false;
     }
   });
-
-  // 美境 Seedance 生成（占位符 + 引用行协议）
-  async function generateMeigen(prompt, modelCfg) {
-    const imageRefs = frames.map((f, i) => `[@image:#${i+1}]`).join(" ");
-    const refs = frames.map((f, i) => `For Image #${i+1}: URL: ${f.remoteUrl}`).join("\n");
-    const fullPrompt = `${imageRefs} ${prompt}\n${refs}`;
-
-    const submitResp = await fetch(`${API_BASE}/api/generate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: fullPrompt, model: modelCfg.model }),
-    });
-    const submitData = await submitResp.json();
-
-    if (!submitData.success) {
-      progressText.textContent = "提交失败: " + (submitData.error || "未知错误");
-      videoResult.innerHTML = `<div class="placeholder">❌ 提交失败<br>${escHtml(submitData.error || "")}</div>`;
-      return;
-    }
-
-    progressFill.style.width = "30%";
-    progressText.textContent = `任务已提交 (session=${submitData.sessionId})，等待创作中…`;
-
-    const pollResp = await fetch(`${API_BASE}/api/poll/${submitData.sessionId}/${submitData.assistantMessageId}`);
-    const pollData = await pollResp.json();
-
-    if (pollData.success && pollData.status === "video_generating") {
-      progressFill.style.width = "100%";
-      progressText.textContent = "视频已开始生成！";
-      videoResult.innerHTML = `<div class="placeholder">
-        ✅ 视频已开始生成<br><br>
-        由于视频生成耗时较长（约 10-20 分钟），请前往美境 web 端查看进度：<br>
-        <a href="${pollData.url}" target="_blank" style="color:#FF7A45;font-weight:600;">${pollData.url}</a>
-      </div>`;
-    } else {
-      progressFill.style.width = "100%";
-      progressText.textContent = "生成异常";
-      videoResult.innerHTML = `<div class="placeholder">❌ 生成异常<br>${escHtml(pollData.error || "未知错误")}</div>`;
-    }
-  }
 
   // 阿里云百炼 Happy Horse 1.1 生成
   async function generateDashscope(prompt, modelCfg) {
