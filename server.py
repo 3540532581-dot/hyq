@@ -633,7 +633,27 @@ def ark_poll_task(api_key: str, task_id: str) -> dict:
 # LibTV 是 LiblibAI 推出的 AI 视频创作平台，通过 CLI 调用
 # 安装方式: curl -fsSL https://liblibai-web-static.liblib.cloud/cli/latest/install-libtv-cli.sh | bash
 
-LIBTV_CLI_PATH = os.path.expanduser("~/.libtv/libtv")
+def _find_libtv_cli() -> str:
+    """查找 libtv CLI 路径，支持多种安装位置。"""
+    candidates = [
+        os.path.expanduser("~/.libtv/libtv"),
+        os.path.expanduser("~/.local/bin/libtv"),
+        "/usr/local/bin/libtv",
+        "/usr/bin/libtv",
+    ]
+    for path in candidates:
+        if os.path.isfile(path):
+            return path
+    # 最后尝试从 PATH 中查找
+    try:
+        proc = subprocess.run(["which", "libtv"], capture_output=True, text=True, timeout=5)
+        if proc.returncode == 0 and proc.stdout.strip():
+            return proc.stdout.strip()
+    except Exception:
+        pass
+    return candidates[0]  # 默认返回标准位置
+
+LIBTV_CLI_PATH = _find_libtv_cli()
 LIBTV_CONFIG_DIR = os.path.expanduser("~/.libtv")
 LIBTV_PROJECT_UUID = "2c1fc2023fc44504b4b62987567b0692"  # "点仔动效自动生成"画布
 LIBTV_RATIOS = {"1:1", "16:9", "9:16", "4:3", "3:4", "21:9"}
