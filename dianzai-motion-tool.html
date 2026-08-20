@@ -354,7 +354,7 @@
     <div class="dropzone" id="dropzone">
       <div class="icon">🖼️</div>
       <p>拖拽图片到这里，或 <a href="javascript:void(0)">点击选择文件</a></p>
-      <div class="sub">推荐纯绿色背景 #00FF00 · 短边 ≥ 1024px · 比例 1:1 最佳</div>
+      <div class="sub">推荐纯色背景 · 短边 ≥ 1024px · 任意比例均可</div>
       <input type="file" id="fileInput" accept="image/png,image/jpeg" multiple>
     </div>
 
@@ -587,10 +587,9 @@ const libtvStatusErr = $("#libtvStatusErr");
     const short = Math.min(width, height);
     checks.resolution = { pass: short >= 1024, text: `${width}×${height}（短边 ${short}px）` };
 
-    // 比例
+    // 比例（已放宽：任意比例均通过，但仍记录标签供提示词使用）
     const rk = ratioKey(width, height);
-    const ratioHit = ALLOWED_RATIOS.find(r => r.label === rk);
-    checks.ratio = { pass: !!ratioHit, text: rk + (ratioHit ? "" : "（不在允许列表）") };
+    checks.ratio = { pass: true, text: rk };
     frame.ratioLabel = rk;
 
     // 背景检测（异步，采样边缘像素）
@@ -883,14 +882,12 @@ const libtvStatusErr = $("#libtvStatusErr");
       addRow(`${tag} · 分辨率`, c.resolution.pass ? "pass" : "fail", c.resolution.text);
       addRow(`${tag} · 画面比例`, c.ratio.pass ? "pass" : "fail", c.ratio.text);
 
-      // 背景
+      // 背景（已放宽：只要是纯色即通过，不限制具体颜色）
       if (f.bg) {
-        if (f.bg.match) {
-          addRow(`${tag} · 背景`, "pass", `匹配 ${f.bg.match.name}（${f.bg.uniform ? "均匀" : "略有不均"}）`);
-        } else if (!f.bg.uniform) {
-          addRow(`${tag} · 背景`, "warn", `边缘色差不均匀（Δ${f.bg.maxDiff}），建议纯色背景`);
+        if (f.bg.uniform) {
+          addRow(`${tag} · 背景`, "pass", `纯色背景（RGB ${f.bg.avg.join(",")}，Δ${f.bg.maxDiff}）`);
         } else {
-          addRow(`${tag} · 背景`, "warn", `背景色 RGB(${f.bg.avg.join(",")}) 不在推荐色内，建议纯绿/蓝/黑`);
+          addRow(`${tag} · 背景`, "warn", `边缘色差不均匀（Δ${f.bg.maxDiff}），建议纯色背景`);
         }
       }
 
