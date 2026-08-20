@@ -385,7 +385,7 @@
 
     <div class="sub-label"><span class="bar"></span>提示词生成结果</div>
     <div class="prompt-box" id="promptBox">
-      <span class="hl">小熊猫做出走路的姿势，动作自然，表情不变，头不动，脸部不动，ip的手不动，</span><span class="common">保持 IP 大小比例不变，ip露出完整全身，不要被截掉，背景颜色不变，固定背景，固定镜头，简约 3D 建模风格</span><span class="ratio">，1:1</span>
+      <span class="hl">小熊猫做出走路的姿势，动作自然，表情不变，头不动，脸部不动，ip的手不动，</span><span class="common">保持 IP 大小比例不变，ip露出完整全身，不要被截掉，背景颜色不变，固定背景，固定镜头，简约 3D 建模风格</span>
       <button class="copy-btn" id="copyBtn">复制</button>
     </div>
   </div>
@@ -930,21 +930,16 @@ const libtvStatusErr = $("#libtvStatusErr");
       actionDesc = (customAction.value.trim() || "（请填写动作描述）").replace(/，$/, "");
     }
 
-    // 比例：根据上传的第一张图片比例自动读取
-    const ratio = frames.length ? frames[0].ratioLabel : "1:1";
-
-    // 组装完整提示词（动作 + 通用 + 比例）
+    // 组装完整提示词（动作 + 通用）
     const parts = [actionDesc];
     parts.push(COMMON_PROMPT);
-    parts.push(ratio);
     const full = parts.join("，");
 
     // 展示（不同颜色区分各部分）
     const actionHtml = `<span class="hl">${escHtml(actionDesc)}</span>`;
     const commonHtml = `<span class="common">，${escHtml(COMMON_PROMPT)}</span>`;
-    const ratioHtml = `<span class="ratio">，${escHtml(ratio)}</span>`;
 
-    promptBox.innerHTML = actionHtml + commonHtml + ratioHtml +
+    promptBox.innerHTML = actionHtml + commonHtml +
       `<button class="copy-btn" id="copyBtn">复制</button>`;
     $("#copyBtn").onclick = () => copyPrompt(full);
     promptBox.dataset.prompt = full;
