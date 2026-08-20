@@ -716,12 +716,13 @@ def libtv_submit_video(prompt: str, local_paths: list[str], ratio: str, duration
         ratio = "1:1"
 
     try:
-        # 1. 上传所有关键帧到 LibTV
+        # 1. 上传所有关键帧到 LibTV（使用英文名称避免编码问题）
+        timestamp = int(time.time())
         frame_names = []
         for i, path in enumerate(local_paths):
             if not os.path.exists(path):
                 return {"success": False, "error": f"本地图片不存在: {path}"}
-            frame_name = f"帧{i + 1}"
+            frame_name = f"frame{i + 1}-{timestamp}"
             upload_cmd = [
                 LIBTV_CLI_PATH, "upload", frame_name, "-t", "image",
                 "--resource", path, "-p", LIBTV_PROJECT_UUID
@@ -739,8 +740,8 @@ def libtv_submit_video(prompt: str, local_paths: list[str], ratio: str, duration
         else:
             mode_type = "mixed2video"
 
-        # 3. 创建视频节点
-        node_name = f"dianzai-{int(time.time() * 1000)}"
+        # 3. 创建视频节点（同时连接图片节点到左侧）
+        node_name = f"dianzai-{timestamp}"
         create_cmd = [
             LIBTV_CLI_PATH, "node", "create", node_name, "-t", "video",
             "-p", LIBTV_PROJECT_UUID,
@@ -750,28 +751,27 @@ def libtv_submit_video(prompt: str, local_paths: list[str], ratio: str, duration
             "-s", f"duration={duration}",
             "--prompt", prompt
         ]
+        # 在创建时就连接图片节点
+        for fn in frame_names:
+            create_cmd.extend(["--left", fn])
+
         proc = subprocess.run(create_cmd, capture_output=True, text=True, timeout=30, env=env)
         if proc.returncode != 0:
             return {"success": False, "error": f"创建视频节点失败: {proc.stderr[:300]}"}
 
-        # 4. 将图片节点连到视频节点左侧
-        if frame_names:
-            left_args = []
-            for fn in frame_names:
-                left_args.extend(["--left", fn])
-            link_cmd = [LIBTV_CLI_PATH, "node", node_name] + left_args + ["-p", LIBTV_PROJECT_UUID]
-            proc = subprocess.run(link_cmd, capture_output=True, text=True, timeout=30, env=env)
-            if proc.returncode != 0:
-                return {"success": False, "error": f"连边失败: {proc.stderr[:300]}"}
-
-        # 5. 触发生成（同步等待，约 2-5 分钟）
+        # 4. 触发生成（同步等待，约 2-5 分钟）
         run_cmd = [LIBTV_CLI_PATH, "node", node_name, "--run", "-p", LIBTV_PROJECT_UUID]
         proc = subprocess.run(run_cmd, capture_output=True, text=True, timeout=600, env=env)
         if proc.returncode != 0:
             return {"success": False, "error": f"生成失败: {proc.stderr[:300]}"}
 
-        # 6. 解析结果
-        result = json.loads(proc.stdout)
+        # 5. 解析结果（stdout 可能包含进度行，需要提取最后的 JSON）
+        stdout_text = proc.stdout.strip()
+        # 找到最后一个 { 开头的行（JSON 对象）
+        json_lines = [line for line in stdout_text.split("\n") if line.strip().startswith("{")]
+        if not json_lines:
+            return {"success": False, "error": f"无法解析生成结果: {stdout_text[:300]}"}
+        result = json.loads(json_lines[-1])
         video_url = result.get("data", {}).get("url", [None])[0]
         if not video_url:
             return {"success": False, "error": "生成完成但未获取到视频 URL"}
