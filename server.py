@@ -732,13 +732,21 @@ def libtv_submit_video(prompt: str, local_paths: list[str], ratio: str, duration
                 return {"success": False, "error": f"上传帧{i+1}失败: {proc.stderr[:300]}"}
             frame_names.append(frame_name)
 
-        # 2. 确定生成模式
-        if len(frame_names) == 1:
-            mode_type = "singleImage2video"
-        elif len(frame_names) == 2:
-            mode_type = "frames2video"
+        # 2. 确定生成模式（不同模型支持的 modeType 不同）
+        if model == "Happy Horse 1.1":
+            # Happy Horse 1.1: 1张用 frames2video, 2张及以上用 image2video
+            if len(frame_names) == 1:
+                mode_type = "frames2video"
+            else:
+                mode_type = "image2video"
         else:
-            mode_type = "mixed2video"
+            # Seedance 等模型
+            if len(frame_names) == 1:
+                mode_type = "singleImage2video"
+            elif len(frame_names) == 2:
+                mode_type = "frames2video"
+            else:
+                mode_type = "mixed2video"
 
         # 3. 创建视频节点（同时连接图片节点到左侧）
         node_name = f"dianzai-{timestamp}"
