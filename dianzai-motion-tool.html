@@ -1072,7 +1072,7 @@ const libtvStatusErr = $("#libtvStatusErr");
       const filename = data.filename;
 
       progressText.textContent = "视频已就绪！";
-      videoResult.innerHTML = `<video src="${localUrl}" controls autoplay playsinline></video>`;
+      videoResult.innerHTML = `<video src="${localUrl}" controls autoplay playsinline style="max-width:320px;width:100%;border-radius:var(--radius-sm);display:block;margin:0 auto;"></video>`;
 
       // 添加下载信息栏
       const infoBar = document.createElement("div");
